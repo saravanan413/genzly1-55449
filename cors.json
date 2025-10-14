@@ -1,0 +1,27 @@
+[
+  {
+    "origin": [
+      "http://localhost:5173",
+      "http://localhost:3000",
+      "http://localhost:8080",
+      "https://*.lovable.app",
+      "https://*.lovableproject.com"
+    ],
+    "method": ["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS"],
+    "responseHeader": [
+      "Content-Type",
+      "Authorization",
+      "X-Firebase-AppCheck",
+      "x-goog-api-client",
+      "x-goog-upload-protocol",
+      "x-goog-upload-command",
+      "x-goog-upload-header-content-length",
+      "x-goog-upload-header-content-type",
+      "x-goog-upload-file-name",
+      "x-goog-upload-content-length-range",
+      "x-goog-upload-offset",
+      "x-goog-upload-status"
+    ],
+    "maxAgeSeconds": 3600
+  }
+]

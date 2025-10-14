@@ -8,6 +8,7 @@ export interface UploadOptions {
   timeout?: number;
   retries?: number;
   abortSignal?: AbortSignal;
+  disableStallWatchdog?: boolean; // Diagnostic mode: disable to see raw Firebase errors
 }
 
 export interface NetworkAwareUploadResult {
@@ -67,7 +68,8 @@ export class NetworkAwareUploader {
         storagePath,
         adaptiveTimeout: Math.round(adaptiveTimeout / 1000) + 's',
         isSlowConnection,
-        connectionType: connection?.effectiveType || 'unknown'
+        connectionType: connection?.effectiveType || 'unknown',
+        diagnosticMode: options.disableStallWatchdog ? 'ENABLED (watchdog disabled)' : 'disabled'
       });
 
       // Verify user is authenticated before upload
@@ -81,7 +83,8 @@ export class NetworkAwareUploader {
       console.log('🔐 Authenticated user uploading:', {
         uid: currentUser.uid,
         email: currentUser.email,
-        pathUserId: storagePath.split('/')[1]
+        pathUserId: storagePath.split('/')[1],
+        bucket: storage.app.options.storageBucket
       });
 
       // Verify UID matches path
@@ -188,10 +191,11 @@ export class NetworkAwareUploader {
     let lastTick = Date.now();
     let cancelledByWatchdog = false;
     const connection = (navigator as any).connection;
-    const stallThreshold = (connection?.effectiveType === 'slow-2g' || connection?.effectiveType === '2g') ? 45000 : 30000; // Increased from 20s to 30s
+    const stallThreshold = (connection?.effectiveType === 'slow-2g' || connection?.effectiveType === '2g') ? 45000 : 30000;
     const uploadStartTime = Date.now();
 
-    const stallTimer = window.setInterval(() => {
+    // Optional: disable watchdog to see raw Firebase/CORS errors
+    const stallTimer = options.disableStallWatchdog ? null : window.setInterval(() => {
       const bytes = uploadTask.snapshot?.bytesTransferred ?? 0;
       const elapsed = Date.now() - uploadStartTime;
       
@@ -226,14 +230,23 @@ export class NetworkAwareUploader {
           lastTick = Date.now();
         },
         (error) => {
-          window.clearInterval(stallTimer);
-          console.error('❌ Upload task error:', {
+          if (stallTimer) window.clearInterval(stallTimer);
+          
+          // Enhanced CORS diagnostic logging
+          console.error('❌ Upload task error (DETAILED):', {
             code: error?.code,
             message: error?.message,
             serverResponse: error?.serverResponse,
+            customData: error?.customData,
+            name: error?.name,
             bytesTransferred: uploadTask.snapshot?.bytesTransferred,
             totalBytes: uploadTask.snapshot?.totalBytes,
-            cancelledByWatchdog
+            cancelledByWatchdog,
+            diagnosticHint: error?.code === 'storage/unauthorized' 
+              ? 'This is usually a CORS preflight block. Check: 1) Bucket CORS config allows your origin, 2) CORS includes x-goog-upload-* headers, 3) OPTIONS request succeeds in Network tab'
+              : error?.code === 'storage/unauthenticated'
+              ? 'User is not authenticated. Verify auth.currentUser exists.'
+              : 'Check console and Network tab for more details.'
           });
           
           if (cancelledByWatchdog && error?.code === 'storage/canceled') {
@@ -242,7 +255,7 @@ export class NetworkAwareUploader {
           reject(error);
         },
         async () => {
-          window.clearInterval(stallTimer);
+          if (stallTimer) window.clearInterval(stallTimer);
           try {
             const url = await getDownloadURL(uploadTask.snapshot.ref);
             resolve(url);
@@ -294,7 +307,8 @@ export class NetworkAwareUploader {
       if (String(error?.serverResponse || '').toLowerCase().includes('app check')) {
         return 'Upload blocked by App Check. Enable App Check for this app or run in debug mode during development.';
       }
-      return 'Permission denied by Storage rules. Ensure the user has access to this path.';
+      // CORS preflight failure also shows as unauthorized
+      return 'Permission denied. Most common causes: 1) CORS preflight blocked (bucket needs correct CORS config with x-goog-upload-* headers), 2) Storage rules deny access, 3) App Check enforced without token.';
     }
     
     if (error?.code === 'storage/quota-exceeded') {

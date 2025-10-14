@@ -64,9 +64,17 @@ export const uploadMediaToStorage = async (
         onProgress?.(progress);
       },
       (error) => {
-        console.error('❌ Upload error:', {
+        console.error('❌ Upload error (DETAILED - Check for CORS issues):', {
           code: error.code,
-          message: error.message
+          message: error.message,
+          serverResponse: error.serverResponse,
+          customData: error.customData,
+          name: error.name,
+          diagnosticHint: error.code === 'storage/unauthorized' 
+            ? '🚨 MOST LIKELY CORS ISSUE: Bucket needs CORS config with x-goog-upload-* headers for your origin. Check Network tab for failed OPTIONS request.'
+            : error.code === 'storage/unauthenticated'
+            ? 'User not authenticated'
+            : 'Check Network tab in DevTools for more details'
         });
         reject(error);
       },
