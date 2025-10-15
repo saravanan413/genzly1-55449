@@ -12,23 +12,25 @@ export type StorageConnectivityReport = {
 
 const DEFAULT_HOST = 'https://firebasestorage.googleapis.com';
 
-function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+function withTimeout<T>(fn: (signal: AbortSignal) => Promise<T>, ms: number, label: string): Promise<T> {
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), ms);
-  return p.finally(() => clearTimeout(t));
+  return fn(controller.signal).finally(() => clearTimeout(t));
 }
 
 async function attempt(url: string, method: 'GET' | 'HEAD' | 'POST', timeoutMs: number, details: string[]): Promise<boolean> {
   const started = Date.now();
   try {
     await withTimeout(
-      fetch(url, {
-        method,
-        mode: 'no-cors',
-        cache: 'no-store',
-        keepalive: true,
-        // Note: no headers so it remains a simple request and avoids preflight
-      }),
+      (signal) =>
+        fetch(url, {
+          method,
+          mode: 'no-cors',
+          cache: 'no-store',
+          keepalive: true,
+          signal,
+          // Note: no headers so it remains a simple request and avoids preflight
+        }),
       timeoutMs,
       `${method} ${url}`
     );
