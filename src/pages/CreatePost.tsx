@@ -10,6 +10,7 @@ import ShareToFollowers from '../components/camera/ShareToFollowers';
 import GalleryPicker from '../components/camera/GalleryPicker';
 import MediaEditor from '../components/camera/MediaEditor';
 import InstagramUploadProgress from '../components/ui/InstagramUploadProgress';
+import { createInstagramPost, createInstagramReel } from '../services/instagramUpload';
 
 type ViewMode = 'camera' | 'gallery' | 'edit' | 'preview' | 'share';
 
@@ -144,8 +145,6 @@ const CreatePost = () => {
       
       if (selectedMedia.type === 'image') {
         // Instagram-style photo upload
-        const { createInstagramPost } = await import('../services/instagramUpload');
-        
         await createInstagramPost(
           selectedMedia.file, 
           caption,
@@ -159,8 +158,6 @@ const CreatePost = () => {
         });
       } else {
         // Instagram-style video upload (reel)
-        const { createInstagramReel } = await import('../services/instagramUpload');
-        
         await createInstagramReel(
           selectedMedia.file, 
           caption,
