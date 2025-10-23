@@ -73,6 +73,10 @@ export interface ChatListItem {
   lastMessage: string;
   timestamp: number;
   seen: boolean;
+  muted?: boolean;
+  hidden?: boolean;
+  lastSenderId?: string;
+  unreadCount?: number;
 }
 
 // User profile interface for chat context

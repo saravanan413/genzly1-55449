@@ -4,6 +4,7 @@ import Layout from '../components/Layout';
 import ChatHeader from '../components/chat/ChatHeader';
 import ChatList from '../components/chat/ChatList';
 import NotesBar from '../components/chat/NotesBar';
+import HiddenChatsDrawer from '../components/chat/HiddenChatsDrawer';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   subscribeToUserChatList, 
@@ -11,7 +12,15 @@ import {
   clearCachedChatList,
   hydrateUserChatList 
 } from '../services/chat/chatListService';
+import { 
+  muteChatForUser, 
+  hideChatForUser, 
+  deleteChatForUser,
+  unhideChatForUser,
+  getHiddenChatsForUser
+} from '../services/chat/chatActionsService';
 import { logger } from '../utils/logger';
+import { toast } from '@/hooks/use-toast';
 
 const Chat = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -20,6 +29,10 @@ const Chat = () => {
   const [loading, setLoading] = useState(true);
   const [isFromCache, setIsFromCache] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showHiddenChats, setShowHiddenChats] = useState(false);
+  const [hiddenChatsList, setHiddenChatsList] = useState<ChatListItem[]>([]);
+  const [isPulling, setIsPulling] = useState(false);
+  const [pullStartY, setPullStartY] = useState(0);
   const navigate = useNavigate();
   const { currentUser, loading: authLoading } = useAuth();
 
@@ -102,8 +115,123 @@ const Chat = () => {
     navigate('/explore');
   };
 
+  const handleMuteChat = async (chatId: string, mute: boolean) => {
+    if (!currentUser) return;
+    
+    try {
+      await muteChatForUser(currentUser.uid, chatId, mute);
+      toast({
+        title: mute ? 'Chat muted' : 'Chat unmuted',
+        description: mute ? 'You will not receive notifications' : 'You will receive notifications',
+      });
+    } catch (error) {
+      logger.error('Failed to mute/unmute chat', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update chat settings',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteChat = async (chatId: string) => {
+    if (!currentUser) return;
+    
+    try {
+      await deleteChatForUser(currentUser.uid, chatId);
+      toast({
+        title: 'Chat deleted',
+        description: 'Chat has been deleted for you',
+      });
+    } catch (error) {
+      logger.error('Failed to delete chat', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete chat',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleHideChat = async (chatId: string) => {
+    if (!currentUser) return;
+    
+    try {
+      await hideChatForUser(currentUser.uid, chatId);
+      toast({
+        title: 'Chat hidden',
+        description: 'Pull down to view hidden chats',
+      });
+    } catch (error) {
+      logger.error('Failed to hide chat', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to hide chat',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleUnhideChat = async (chatId: string) => {
+    if (!currentUser) return;
+    
+    try {
+      await unhideChatForUser(currentUser.uid, chatId);
+      toast({
+        title: 'Chat unhidden',
+        description: 'Chat is now visible',
+      });
+    } catch (error) {
+      logger.error('Failed to unhide chat', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to unhide chat',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const loadHiddenChats = async () => {
+    if (!currentUser) return;
+    
+    try {
+      const hiddenChatIds = await getHiddenChatsForUser(currentUser.uid);
+      const hidden = chatList.filter(chat => hiddenChatIds.includes(chat.chatId));
+      setHiddenChatsList(hidden);
+      setShowHiddenChats(true);
+    } catch (error) {
+      logger.error('Failed to load hidden chats', error);
+    }
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (window.scrollY === 0) {
+      setPullStartY(e.touches[0].clientY);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (pullStartY > 0) {
+      const pullDistance = e.touches[0].clientY - pullStartY;
+      if (pullDistance > 100 && !isPulling) {
+        setIsPulling(true);
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (isPulling) {
+      loadHiddenChats();
+    }
+    setPullStartY(0);
+    setIsPulling(false);
+  };
+
+  // Filter out hidden chats
+  const visibleChatList = chatList.filter(chat => !chat.hidden);
+
   // Convert ChatListItem to ChatPreview format expected by ChatList component
-  const chatPreviews = chatList.map(chat => ({
+  const chatPreviews = visibleChatList.map(chat => ({
     chatId: chat.chatId,
     otherUser: {
       id: chat.receiverId,
@@ -114,10 +242,11 @@ const Chat = () => {
     lastMessage: chat.lastMessage ? {
       text: chat.lastMessage,
       timestamp: chat.timestamp,
-      senderId: chat.lastSenderId,
+      senderId: chat.lastSenderId ?? '',
       seen: chat.seen
     } : null,
-    unreadCount: chat.unreadCount
+    unreadCount: chat.unreadCount ?? 0,
+    muted: chat.muted ?? false,
   }));
 
   // Show loading only if we're still loading auth or if we have no cache and no data
@@ -169,11 +298,22 @@ const Chat = () => {
 
   return (
     <Layout>
-      <div className="w-full bg-background dark:bg-gray-900">
+      <div 
+        className="w-full bg-background dark:bg-gray-900"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         <div className="w-full max-w-2xl mx-auto">
           <div className="p-4 md:p-6">
             <ChatHeader onNewChat={handleNewChat} />
           </div>
+          
+          {isPulling && (
+            <div className="text-center py-2 text-sm text-muted-foreground">
+              Release to view hidden chats...
+            </div>
+          )}
           
           {/* Notes Bar */}
           <NotesBar />
@@ -205,9 +345,24 @@ const Chat = () => {
               currentUserId={currentUser.uid}
               onChatClick={handleChatClick}
               onDoubleTap={handleDoubleTap}
+              onMuteChat={handleMuteChat}
+              onDeleteChat={handleDeleteChat}
+              onHideChat={handleHideChat}
             />
           </div>
         </div>
+
+        <HiddenChatsDrawer
+          open={showHiddenChats}
+          onOpenChange={setShowHiddenChats}
+          hiddenChats={hiddenChatsList.map(chat => ({
+            chatId: chat.chatId,
+            displayName: chat.displayName,
+            username: chat.username,
+            avatar: chat.avatar,
+          }))}
+          onUnhide={handleUnhideChat}
+        />
       </div>
     </Layout>
   );

@@ -23,6 +23,8 @@ export interface ChatListItem {
   seen: boolean;
   lastSenderId: string;
   unreadCount: number;
+  muted?: boolean;
+  hidden?: boolean;
 }
 
 interface UserData {
@@ -171,6 +173,20 @@ export const hydrateUserChatList = async (currentUserId: string): Promise<ChatLi
       const isMessageSeen = lastMessage.senderId === currentUserId || lastMessage.seen === true;
       const unreadCount = (!isMessageSeen && lastMessage.senderId !== currentUserId) ? 1 : 0;
 
+      // Get user-specific chat metadata (muted, hidden)
+      let muted = false;
+      let hidden = false;
+      try {
+        const userChatDoc = await getDoc(doc(db, 'users', currentUserId, 'chats', chatId));
+        if (userChatDoc.exists()) {
+          const userChatData = userChatDoc.data();
+          muted = userChatData.muted || false;
+          hidden = userChatData.hidden || false;
+        }
+      } catch (error) {
+        logger.debug('No user chat metadata found', { chatId });
+      }
+
       const chatItem: ChatListItem = {
         chatId,
         receiverId: otherUserId,
@@ -181,7 +197,9 @@ export const hydrateUserChatList = async (currentUserId: string): Promise<ChatLi
         timestamp: lastMessage.timestamp?.toDate?.()?.getTime() || chatData.updatedAt?.toDate?.()?.getTime() || Date.now(),
         seen: isMessageSeen,
         lastSenderId: lastMessage.senderId || '',
-        unreadCount
+        unreadCount,
+        muted,
+        hidden
       };
 
       return chatItem;
@@ -292,6 +310,20 @@ export const subscribeToUserChatList = (
         const isMessageSeen = lastMessage.senderId === currentUserId || lastMessage.seen === true;
         const unreadCount = (!isMessageSeen && lastMessage.senderId !== currentUserId) ? 1 : 0;
 
+        // Get user-specific chat metadata (muted, hidden)
+        let muted = false;
+        let hidden = false;
+        try {
+          const userChatDoc = await getDoc(doc(db, 'users', currentUserId, 'chats', chatId));
+          if (userChatDoc.exists()) {
+            const userChatData = userChatDoc.data();
+            muted = userChatData.muted || false;
+            hidden = userChatData.hidden || false;
+          }
+        } catch (error) {
+          logger.debug('No user chat metadata found', { chatId });
+        }
+
         const chatItem: ChatListItem = {
           chatId,
           receiverId: otherUserId,
@@ -302,7 +334,9 @@ export const subscribeToUserChatList = (
           timestamp: lastMessage.timestamp?.toDate?.()?.getTime() || chatData.updatedAt?.toDate?.()?.getTime() || Date.now(),
           seen: isMessageSeen,
           lastSenderId: lastMessage.senderId || '',
-          unreadCount
+          unreadCount,
+          muted,
+          hidden
         };
 
         return chatItem;
