@@ -49,6 +49,7 @@ const ChatList: React.FC<ChatListProps> = ({
 }) => {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
+  const [isLongPress, setIsLongPress] = useState(false);
 
   const filteredChats = useMemo(() => {
     if (!searchQuery) return chatPreviews;
@@ -65,7 +66,9 @@ const ChatList: React.FC<ChatListProps> = ({
   }, [chatPreviews, selectedChatId]);
 
   const handleLongPressStart = (chatId: string) => {
+    setIsLongPress(false);
     const timer = setTimeout(() => {
+      setIsLongPress(true);
       setSelectedChatId(chatId);
     }, 500);
     setLongPressTimer(timer);
@@ -75,6 +78,14 @@ const ChatList: React.FC<ChatListProps> = ({
     if (longPressTimer) {
       clearTimeout(longPressTimer);
       setLongPressTimer(null);
+    }
+    // Reset after a short delay to allow drawer to open
+    setTimeout(() => setIsLongPress(false), 100);
+  };
+
+  const handleChatClick = (receiverId: string) => {
+    if (!isLongPress) {
+      onChatClick(receiverId);
     }
   };
 
@@ -107,11 +118,11 @@ const ChatList: React.FC<ChatListProps> = ({
           return (
             <div
               key={chat.chatId}
-              onClick={() => onChatClick(chat.otherUser.id)}
+              onClick={() => handleChatClick(chat.otherUser.id)}
               onDoubleClick={() => onDoubleTap(chat.otherUser.id)}
               onTouchStart={() => handleLongPressStart(chat.chatId)}
               onTouchEnd={handleLongPressEnd}
-              onTouchCancel={handleLongPressEnd}
+              onTouchMove={handleLongPressEnd}
               onMouseDown={() => handleLongPressStart(chat.chatId)}
               onMouseUp={handleLongPressEnd}
               onMouseLeave={handleLongPressEnd}
