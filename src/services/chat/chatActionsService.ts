@@ -1,14 +1,14 @@
-import { doc, updateDoc, deleteDoc, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { logger } from '@/utils/logger';
 
 export const muteChatForUser = async (userId: string, chatId: string, mute: boolean): Promise<void> => {
   try {
     const userChatRef = doc(db, 'users', userId, 'chats', chatId);
-    await updateDoc(userChatRef, {
+    await setDoc(userChatRef, {
       muted: mute,
       mutedAt: mute ? Date.now() : null,
-    });
+    }, { merge: true });
     logger.debug('Chat mute status updated', { userId, chatId, muted: mute });
   } catch (error) {
     logger.error('Failed to update chat mute status', error);
@@ -19,10 +19,10 @@ export const muteChatForUser = async (userId: string, chatId: string, mute: bool
 export const hideChatForUser = async (userId: string, chatId: string): Promise<void> => {
   try {
     const userChatRef = doc(db, 'users', userId, 'chats', chatId);
-    await updateDoc(userChatRef, {
+    await setDoc(userChatRef, {
       hidden: true,
       hiddenAt: Date.now(),
-    });
+    }, { merge: true });
     logger.debug('Chat hidden for user', { userId, chatId });
   } catch (error) {
     logger.error('Failed to hide chat', error);
@@ -33,10 +33,10 @@ export const hideChatForUser = async (userId: string, chatId: string): Promise<v
 export const unhideChatForUser = async (userId: string, chatId: string): Promise<void> => {
   try {
     const userChatRef = doc(db, 'users', userId, 'chats', chatId);
-    await updateDoc(userChatRef, {
+    await setDoc(userChatRef, {
       hidden: false,
       hiddenAt: null,
-    });
+    }, { merge: true });
     logger.debug('Chat unhidden for user', { userId, chatId });
   } catch (error) {
     logger.error('Failed to unhide chat', error);
