@@ -3,7 +3,7 @@ import { useState, useRef } from 'react';
 import { ArrowLeft, Camera, Image, Type, Palette, Send, VideoIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { uploadStoryMedia, createStorySkeleton, updateStoryWithMedia } from '../services/mediaService';
+import { uploadStory } from '../services/instagram/uploadService';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import CropImageModal from "@/components/CropImageModal";
@@ -15,6 +15,7 @@ const AddStory = () => {
   const [textColor, setTextColor] = useState('#ffffff');
   const [backgroundColor, setBackgroundColor] = useState('#000000');
   const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{stage: string; progress: number} | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const [showCrop, setShowCrop] = useState(false);
@@ -66,26 +67,27 @@ const AddStory = () => {
     }
 
     setLoading(true);
+    setUploadProgress({ stage: 'preparing', progress: 0 });
 
     try {
       if (selectedFile) {
-        // Create story skeleton first
-        const storyId = await createStorySkeleton(currentUser.uid, selectedFile.type);
-        
-        // Upload media story
-        const mediaURL = await uploadStoryMedia(selectedFile.file, storyId);
-        
-        // Update story with media URL
-        await updateStoryWithMedia(storyId, mediaURL);
+        // Upload story using Instagram-style service
+        await uploadStory(
+          selectedFile.file,
+          selectedFile.type,
+          (stage, progress) => {
+            setUploadProgress({ stage, progress });
+          }
+        );
       } else {
-        // Create text-only story (you'd need to generate an image from text)
-        // For now, we'll skip text-only stories or create a simple colored background
+        // Text-only stories not supported yet
         toast({
           title: "Feature Coming Soon",
           description: "Text-only stories will be available soon!",
           variant: "destructive"
         });
         setLoading(false);
+        setUploadProgress(null);
         return;
       }
 
@@ -104,6 +106,7 @@ const AddStory = () => {
       });
     } finally {
       setLoading(false);
+      setUploadProgress(null);
     }
   };
 
@@ -172,7 +175,11 @@ const AddStory = () => {
             className="bg-primary text-primary-foreground hover:bg-primary/90"
           >
             <Send size={16} className="mr-1" />
-            {loading ? 'Sharing...' : 'Share'}
+            {loading 
+              ? uploadProgress 
+                ? `${uploadProgress.stage} ${Math.round(uploadProgress.progress)}%` 
+                : 'Sharing...' 
+              : 'Share'}
           </Button>
         </div>
 

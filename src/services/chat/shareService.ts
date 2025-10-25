@@ -1,5 +1,5 @@
 
-import { uploadChatMedia } from '../mediaService';
+import { uploadChatMedia } from '../instagram/uploadService';
 import { sendMessage } from './messageService';
 import { ensureChatExists } from './chatService';
 import { logger } from '../../utils/logger';
