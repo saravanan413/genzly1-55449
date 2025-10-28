@@ -1,9 +1,3 @@
-/**
- * Chat Service
- * 
- * Handles chat messaging functionality.
- * Media uploads have been moved to src/services/instagram/uploadService.ts
- */
 
 import { 
   collection, 

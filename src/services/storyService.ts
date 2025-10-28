@@ -12,8 +12,8 @@ import {
   deleteDoc,
   onSnapshot
 } from 'firebase/firestore';
-import { db } from '../config/firebase';
-import { uploadStory } from './instagram/uploadService';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../config/firebase';
 
 export interface Story {
   id: string;
@@ -31,9 +31,6 @@ export interface Story {
   viewCount: number;
 }
 
-/**
- * Create story using Instagram-style upload service
- */
 export const createStory = async (
   userId: string,
   mediaFile: File | null,
@@ -41,36 +38,41 @@ export const createStory = async (
   backgroundColor?: string
 ) => {
   try {
-    if (!mediaFile) {
-      throw new Error('Media file is required');
+    let mediaUrl = '';
+    let mediaType: 'image' | 'video' = 'image';
+
+    if (mediaFile) {
+      // Upload media to Firebase Storage
+      const storageRef = ref(storage, `stories/${userId}/${Date.now()}_${mediaFile.name}`);
+      const uploadResult = await uploadBytes(storageRef, mediaFile);
+      mediaUrl = await getDownloadURL(uploadResult.ref);
+      mediaType = mediaFile.type.startsWith('video/') ? 'video' : 'image';
     }
-
-    const mediaType = mediaFile.type.startsWith('video/') ? 'video' : 'image';
-
-    // Upload using Instagram service
-    const result = await uploadStory(mediaFile, mediaType);
 
     // Get user data
     const userDoc = await getDocs(query(collection(db, 'users'), where('__name__', '==', userId)));
     const userData = userDoc.docs[0]?.data();
 
-    // Update story with additional metadata
-    if (result.postId) {
-      const storyRef = doc(db, 'stories', result.postId);
-      await updateDoc(storyRef, {
-        username: userData?.username || 'Unknown',
-        displayName: userData?.displayName || 'Unknown User',
-        avatar: userData?.avatar || null,
-        mediaUrl: result.downloadURL,
-        text: text || '',
-        backgroundColor: backgroundColor || '#000000',
-      });
-    }
+    const storyData = {
+      userId,
+      username: userData?.username || 'Unknown',
+      displayName: userData?.displayName || 'Unknown User',
+      avatar: userData?.avatar || null,
+      mediaUrl,
+      mediaType,
+      text: text || '',
+      backgroundColor: backgroundColor || '#000000',
+      createdAt: serverTimestamp(),
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+      viewers: [],
+      viewCount: 0
+    };
 
-    console.log('✅ Story created with ID:', result.postId);
-    return result.postId;
+    const storyRef = await addDoc(collection(db, 'stories'), storyData);
+    console.log('Story created with ID:', storyRef.id);
+    return storyRef.id;
   } catch (error) {
-    console.error('❌ Error creating story:', error);
+    console.error('Error creating story:', error);
     throw error;
   }
 };
