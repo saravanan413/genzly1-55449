@@ -20,17 +20,38 @@ interface EnhancedFilterSelectorProps {
 const FILTERS: Filter[] = [
   {
     id: 'normal',
-    name: 'None',
-    icon: '👤',
-    preview: '👤',
+    name: 'Normal',
+    icon: '📷',
+    preview: '📷',
     description: 'No filter'
   },
   {
-    id: 'dog',
-    name: 'Dog',
-    icon: '🐶',
-    preview: '🐕',
-    description: 'Dog ears & nose'
+    id: 'clarendon',
+    name: 'Clarendon',
+    icon: '☀️',
+    preview: '☀️',
+    description: 'Bright & vibrant'
+  },
+  {
+    id: 'gingham',
+    name: 'Gingham',
+    icon: '🌸',
+    preview: '🌸',
+    description: 'Soft & vintage'
+  },
+  {
+    id: 'juno',
+    name: 'Juno',
+    icon: '🌊',
+    preview: '🌊',
+    description: 'Cool tones'
+  },
+  {
+    id: 'lark',
+    name: 'Lark',
+    icon: '✨',
+    preview: '✨',
+    description: 'Light & airy'
   }
 ];
 

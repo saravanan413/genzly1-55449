@@ -2,8 +2,6 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Camera, Images, Zap, ZapOff, RotateCcw, Video, Image } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { ARFilterEngine } from './filters/ARFilterEngine';
-import { EnhancedFilterSelector } from './filters/EnhancedFilterSelector';
 
 interface CameraInterfaceProps {
   onMediaCaptured: (media: { type: 'image' | 'video', data: string, file: File }) => void;
@@ -43,12 +41,6 @@ const CameraInterface: React.FC<CameraInterfaceProps> = ({ onMediaCaptured, onGa
     back: false
   });
 
-  // Filter-related state
-  const [activeFilter, setActiveFilter] = useState(() => {
-    // Load last used filter from localStorage
-    return localStorage.getItem('lastUsedFilter') || 'normal';
-  });
-  const [arFilterReady, setARFilterReady] = useState(false);
 
   // Focus and zoom state
   const [focusPoint, setFocusPoint] = useState<{ x: number; y: number } | null>(null);
@@ -405,18 +397,6 @@ const CameraInterface: React.FC<CameraInterfaceProps> = ({ onMediaCaptured, onGa
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
     }
 
-    // If there's an active filter, we need to capture the filter canvas too
-    if (activeFilter !== 'normal') {
-      const filterCanvas = document.querySelector('canvas[class*="absolute inset-0"]') as HTMLCanvasElement;
-      if (filterCanvas) {
-        if (cameraFacing === 'user') {
-          context.scale(-1, 1);
-          context.drawImage(filterCanvas, -canvas.width, 0, canvas.width, canvas.height);
-        } else {
-          context.drawImage(filterCanvas, 0, 0, canvas.width, canvas.height);
-        }
-      }
-    }
     
     canvas.toBlob((blob) => {
       if (blob) {
@@ -494,16 +474,6 @@ const CameraInterface: React.FC<CameraInterfaceProps> = ({ onMediaCaptured, onGa
     setCaptureMode(captureMode === 'photo' ? 'video' : 'photo');
   };
 
-  const handleFilterChange = (filterId: string) => {
-    setActiveFilter(filterId);
-    // Save to localStorage for persistence
-    localStorage.setItem('lastUsedFilter', filterId);
-  };
-
-  const handleARFilterReady = (isReady: boolean) => {
-    setARFilterReady(isReady);
-  };
-
   if (!permissionGranted) {
     return (
       <div className="fixed inset-0 bg-black z-50 flex items-center justify-center">
@@ -549,14 +519,6 @@ const CameraInterface: React.FC<CameraInterfaceProps> = ({ onMediaCaptured, onGa
           }`}
         />
         
-        {/* AR Filter Overlay */}
-        {stream && (
-          <ARFilterEngine
-            videoRef={videoRef}
-            activeFilter={activeFilter}
-            onModelReady={handleARFilterReady}
-          />
-        )}
         
         <canvas ref={canvasRef} className="hidden" />
         
@@ -640,12 +602,6 @@ const CameraInterface: React.FC<CameraInterfaceProps> = ({ onMediaCaptured, onGa
         </div>
       </div>
 
-      {/* Filter Selector */}
-      <EnhancedFilterSelector
-        activeFilter={activeFilter}
-        onFilterChange={handleFilterChange}
-        disabled={!arFilterReady || !stream}
-      />
 
       {/* Bottom Controls */}
       <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/60 to-transparent">
@@ -669,22 +625,7 @@ const CameraInterface: React.FC<CameraInterfaceProps> = ({ onMediaCaptured, onGa
                 : 'bg-transparent hover:bg-white/10'
             }`}
           >
-            {/* Show active filter preview inside button */}
-            {activeFilter !== 'normal' && (
-              <div className="absolute inset-2 rounded-full bg-white/20 flex items-center justify-center">
-                <span className="text-lg">
-                  {activeFilter === 'dog' && '🐶'}
-                </span>
-              </div>
-            )}
-            <div className={`w-12 h-12 rounded-full transition-all duration-200 ${
-              activeFilter !== 'normal' ? 'bg-white/60' : 'bg-white'
-            }`} />
-            
-            {/* Filter indicator ring */}
-            {activeFilter !== 'normal' && (
-              <div className="absolute inset-0 rounded-full border-2 border-blue-400 animate-pulse" />
-            )}
+            <div className="w-12 h-12 rounded-full transition-all duration-200 bg-white" />
           </Button>
 
           {/* Empty space for symmetry */}
