@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Heart, Send } from 'lucide-react';
-import { Story } from '../../services/storyService';
+import { Story } from '../../types/story';
 
 interface StoryViewerProps {
   stories: Story[];
