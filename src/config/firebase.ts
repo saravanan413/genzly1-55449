@@ -18,8 +18,7 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// App Check disabled to allow uploads without additional setup
-// To enable: Configure App Check in Firebase Console with reCAPTCHA v3
+// Initialize Firebase services
 
 // Initialize Firebase services
 export const db = getFirestore(app);
@@ -50,24 +49,6 @@ export const sanitizeMessage = (content: string): string => {
     .trim();
 };
 
-// Validate file uploads according to security rules
-export const validateFileUpload = (file: File): { valid: boolean; error?: string } => {
-  const allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-  const allowedVideoTypes = ['video/mp4', 'video/webm', 'video/mov'];
-  const allowedAudioTypes = ['audio/mp3', 'audio/aac', 'audio/wav'];
-  const maxFileSize = 50 * 1024 * 1024; // 50MB
-
-  if (file.size > maxFileSize) {
-    return { valid: false, error: 'File size exceeds 50MB limit' };
-  }
-
-  const allAllowedTypes = [...allowedImageTypes, ...allowedVideoTypes, ...allowedAudioTypes];
-  if (!allAllowedTypes.includes(file.type)) {
-    return { valid: false, error: 'Invalid file type' };
-  }
-
-  return { valid: true };
-};
 
 // Rate limiting helper using localStorage (client-side)
 export const checkRateLimit = (actionType: string, maxActions: number, timeWindow: number): boolean => {

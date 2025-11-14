@@ -1,6 +1,6 @@
 
 import React, { useRef } from 'react';
-import { ArrowLeft, Upload } from 'lucide-react';
+import { ArrowLeft, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
@@ -73,7 +73,7 @@ const GalleryPicker: React.FC<GalleryPickerProps> = ({ onMediaSelected, onBack }
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="text-center">
           <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-            <Upload size={32} className="text-muted-foreground" />
+            <FolderOpen size={32} className="text-muted-foreground" />
           </div>
           <h2 className="text-xl font-semibold mb-2">Choose a photo or video</h2>
           <p className="text-muted-foreground mb-6">Select from your device's gallery</p>

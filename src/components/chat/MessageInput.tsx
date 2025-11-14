@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { Send, Image, Paperclip, AlertCircle } from 'lucide-react';
+import { Send, AlertCircle } from 'lucide-react';
 import VoiceRecorder from './VoiceRecorder';
 
 interface MessageInputProps {
@@ -82,37 +82,6 @@ const MessageInput: React.FC<MessageInputProps> = ({
       )}
       
       <div className="flex items-center space-x-3">
-        {/* File upload button */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*,video/*,audio/*"
-          className="hidden"
-          onChange={handleFileSelect}
-        />
-        
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={disabled}
-          className="p-2 hover:bg-muted dark:hover:bg-gray-700 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Upload File"
-        >
-          <Paperclip size={20} className="text-foreground dark:text-white" />
-        </button>
-
-        <button
-          onClick={() => {
-            if (fileInputRef.current) {
-              fileInputRef.current.accept = "image/*";
-              fileInputRef.current.click();
-            }
-          }}
-          disabled={disabled}
-          className="p-2 hover:bg-muted dark:hover:bg-gray-700 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Upload Image"
-        >
-          <Image size={20} className="text-foreground dark:text-white" />
-        </button>
 
         {/* Text input */}
         <div className="flex-1 relative">

@@ -1,11 +1,10 @@
 
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
-import CropImageModal from "@/components/CropImageModal";
 import EditProfileHeader from '../components/profile/edit/EditProfileHeader';
-import ProfilePhotoSection from '../components/profile/edit/ProfilePhotoSection';
 import ProfileFormFields from '../components/profile/edit/ProfileFormFields';
 import { useProfileEdit } from '../hooks/useProfileEdit';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const EditProfile = () => {
   const navigate = useNavigate();
@@ -17,11 +16,8 @@ const EditProfile = () => {
     profileImage,
     loading,
     saving,
-    uploading,
     usernameError,
     linkError,
-    showCrop,
-    cropImageData,
     hasChanges,
     hasErrors,
     displayAvatar,
@@ -29,10 +25,6 @@ const EditProfile = () => {
     setBio,
     handleUsernameChange,
     handleExternalLinkChange,
-    handleFileChange,
-    handleCropDone,
-    handleCropCancel,
-    handleRemovePhoto,
     handleSave
   } = useProfileEdit();
 
@@ -55,17 +47,6 @@ const EditProfile = () => {
 
   return (
     <Layout>
-      {/* Crop Modal */}
-      {cropImageData && (
-        <CropImageModal
-          open={showCrop}
-          image={cropImageData}
-          aspect={1}
-          onCancel={handleCropCancel}
-          onCrop={handleCropDone}
-        />
-      )}
-
       {/* Header */}
       <EditProfileHeader
         hasChanges={hasChanges}
@@ -76,14 +57,14 @@ const EditProfile = () => {
 
       {/* Content */}
       <div className="p-6 max-w-md mx-auto">
-        {/* Profile Photo */}
-        <ProfilePhotoSection
-          profileImage={profileImage}
-          displayAvatar={displayAvatar}
-          uploading={uploading}
-          onFileChange={handleFileChange}
-          onRemovePhoto={handleRemovePhoto}
-        />
+        {/* Profile Photo - Read Only */}
+        <div className="flex flex-col items-center mb-8">
+          <Avatar className="w-24 h-24 mb-4">
+            <AvatarImage src={displayAvatar} alt={username} />
+            <AvatarFallback className="text-2xl">{username[0]?.toUpperCase()}</AvatarFallback>
+          </Avatar>
+          <p className="text-sm text-muted-foreground">Profile photo editing coming soon</p>
+        </div>
 
         {/* Form Fields */}
         <ProfileFormFields

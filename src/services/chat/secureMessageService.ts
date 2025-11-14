@@ -14,7 +14,7 @@ import {
   setDoc,
   getDoc
 } from 'firebase/firestore';
-import { db, sanitizeMessage, validateFileUpload } from '../../config/firebase';
+import { db, sanitizeMessage } from '../../config/firebase';
 import { SecurityService } from '../securityService';
 import { ChatMessage } from '../../types/chat';
 import { logger } from '../../utils/logger';
