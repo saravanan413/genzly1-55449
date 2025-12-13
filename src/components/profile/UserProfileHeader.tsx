@@ -10,6 +10,39 @@ import { blockUser, unblockUser } from '../../services/privacy/privacyService';
 import { useAuth } from '../../contexts/AuthContext';
 import ReportModal from '../ReportModal';
 
+// Generate a consistent 10-digit ID from Firebase UID
+const generateUserDisplayId = (firebaseUid?: string): string => {
+  if (!firebaseUid) return '0000000000';
+  
+  // Create a simple hash from the UID to generate a consistent 10-digit number
+  let hash = 0;
+  for (let i = 0; i < firebaseUid.length; i++) {
+    const char = firebaseUid.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  
+  // Make it positive and pad to exactly 10 digits
+  const positiveHash = Math.abs(hash);
+  const numStr = positiveHash.toString().padStart(10, '0');
+  return numStr.slice(0, 10);
+};
+
+// Format join date
+const formatJoinDate = (timestamp?: any): string => {
+  if (!timestamp) return 'Recently joined';
+  
+  try {
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}.${month}.${year}`;
+  } catch {
+    return 'Recently joined';
+  }
+};
+
 interface UserProfileHeaderProps {
   user: UserProfile;
   isOwnProfile: boolean;
@@ -363,7 +396,7 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
       <Dialog open={showAboutModal} onOpenChange={setShowAboutModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>About This Account</DialogTitle>
+            <DialogTitle>About this account</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="flex items-center space-x-3">
@@ -382,20 +415,38 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
             
             <div className="space-y-3 border-t pt-4">
               <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Username:</span>
+                <span className="text-sm">@{user?.username}</span>
+              </div>
+              
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Name:</span>
+                <span className="text-sm">{user?.displayName || user?.username || 'Not set'}</span>
+              </div>
+              
+              <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">User ID:</span>
-                <span className="text-sm font-mono">{user?.id}</span>
+                <span className="text-sm font-mono">{generateUserDisplayId(user?.id)}</span>
               </div>
               
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Account Created:</span>
-                <span className="text-sm">Recently joined</span>
+                <span className="text-sm text-muted-foreground">Account type:</span>
+                <span className="text-sm">{user?.isPrivate ? 'Private' : 'Personal'}</span>
               </div>
               
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Email Verified:</span>
-                <span className="text-sm">
-                  {user?.isVerified ? '✅ Verified' : '❌ Not verified'}
-                </span>
+                <span className="text-sm text-muted-foreground">Joined:</span>
+                <span className="text-sm">{formatJoinDate((user as any)?.createdAt)}</span>
+              </div>
+              
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Login method:</span>
+                <span className="text-sm">Email</span>
+              </div>
+              
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Account status:</span>
+                <span className="text-sm text-green-600">Active</span>
               </div>
             </div>
           </div>
