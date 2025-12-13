@@ -7,50 +7,60 @@ import {
 } from "firebase/storage";
 
 /**
- * Convert any image to JPG with 0.95 quality
+ * Convert any image to JPG with specified quality
+ * Accepts: PNG, JPG, WEBP, HEIC, etc.
+ * Returns: File object ready for Firebase Storage upload
  */
-export function convertImageToJpg(file: File): Promise<File> {
+export function convertImageToJpg(file: File, quality: number = 0.95): Promise<File> {
   return new Promise((resolve, reject) => {
-    if (!file.type.startsWith("image/")) {
-      return reject(new Error("File is not an image"));
+    if (!file || !file.type.startsWith("image/")) {
+      reject(new Error("Invalid image file"));
+      return;
     }
 
     const reader = new FileReader();
-    const img = new Image();
 
     reader.onload = () => {
+      const img = new Image();
+
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Canvas context not available"));
+          return;
+        }
+        
+        ctx.drawImage(img, 0, 0);
+
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error("JPEG conversion failed"));
+              return;
+            }
+
+            const jpgFile = new File(
+              [blob],
+              file.name.replace(/\.[^/.]+$/, ".jpg"),
+              { type: "image/jpeg" }
+            );
+
+            resolve(jpgFile);
+          },
+          "image/jpeg",
+          quality
+        );
+      };
+
+      img.onerror = () => reject(new Error("Image load error"));
       img.src = reader.result as string;
     };
 
-    reader.onerror = reject;
-
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
-
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return reject(new Error("Canvas context not available"));
-      
-      ctx.drawImage(img, 0, 0);
-
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) return reject(new Error("JPG conversion failed"));
-
-          const jpgFile = new File(
-            [blob],
-            `${Date.now()}.jpg`,
-            { type: "image/jpeg" }
-          );
-
-          resolve(jpgFile);
-        },
-        "image/jpeg",
-        0.95
-      );
-    };
-
+    reader.onerror = () => reject(new Error("File read error"));
     reader.readAsDataURL(file);
   });
 }
