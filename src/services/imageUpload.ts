@@ -7,50 +7,61 @@ import {
 } from "firebase/storage";
 
 /**
- * Convert any image to JPG with 0.95 quality
+ * Convert any image to JPG with configurable quality
+ * @param file - Original image file from input
+ * @param quality - JPG quality (0.1 – 1.0), defaults to 0.75 for good compression
+ * @returns Converted JPG file
  */
-export function convertImageToJpg(file: File): Promise<File> {
+export function convertImageToJpg(file: File, quality: number = 0.75): Promise<File> {
   return new Promise((resolve, reject) => {
-    if (!file.type.startsWith("image/")) {
-      return reject(new Error("File is not an image"));
+    if (!file || !file.type.startsWith("image/")) {
+      reject(new Error("Invalid image file"));
+      return;
     }
 
     const reader = new FileReader();
-    const img = new Image();
 
     reader.onload = () => {
+      const img = new Image();
+
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Canvas context not available"));
+          return;
+        }
+        
+        ctx.drawImage(img, 0, 0);
+
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error("Image conversion failed"));
+              return;
+            }
+
+            const jpgFile = new File(
+              [blob],
+              file.name.replace(/\.[^/.]+$/, ".jpg"),
+              { type: "image/jpeg" }
+            );
+
+            resolve(jpgFile);
+          },
+          "image/jpeg",
+          quality
+        );
+      };
+
+      img.onerror = () => reject(new Error("Image load failed"));
       img.src = reader.result as string;
     };
 
-    reader.onerror = reject;
-
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
-
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return reject(new Error("Canvas context not available"));
-      
-      ctx.drawImage(img, 0, 0);
-
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) return reject(new Error("JPG conversion failed"));
-
-          const jpgFile = new File(
-            [blob],
-            `${Date.now()}.jpg`,
-            { type: "image/jpeg" }
-          );
-
-          resolve(jpgFile);
-        },
-        "image/jpeg",
-        0.95
-      );
-    };
-
+    reader.onerror = () => reject(new Error("File read failed"));
     reader.readAsDataURL(file);
   });
 }
@@ -74,7 +85,7 @@ export async function uploadImage({
 
   if (!user) throw new Error("User not authenticated");
 
-  const jpgFile = await convertImageToJpg(file);
+  const jpgFile = await convertImageToJpg(file, 0.8);
 
   const storage = getStorage();
   const path = `${folder}/${user.uid}/${jpgFile.name}`;
@@ -109,7 +120,7 @@ export async function uploadChatImage(
 
   if (!user) throw new Error("User not authenticated");
 
-  const jpgFile = await convertImageToJpg(file);
+  const jpgFile = await convertImageToJpg(file, 0.8);
 
   const storage = getStorage();
   const path = `chats/${chatId}/${messageId}/${jpgFile.name}`;
