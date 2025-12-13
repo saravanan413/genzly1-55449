@@ -43,6 +43,24 @@ const formatJoinDate = (timestamp?: any): string => {
   }
 };
 
+// Check if account is inactive (no login for 90+ days)
+const getAccountStatus = (lastActive?: any): { status: string; isActive: boolean } => {
+  if (!lastActive) return { status: 'Active', isActive: true };
+  
+  try {
+    const lastActiveDate = lastActive.toDate ? lastActive.toDate() : new Date(lastActive);
+    const now = new Date();
+    const daysDiff = Math.floor((now.getTime() - lastActiveDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysDiff > 90) {
+      return { status: 'Currently inactive', isActive: false };
+    }
+    return { status: 'Active', isActive: true };
+  } catch {
+    return { status: 'Active', isActive: true };
+  }
+};
+
 interface UserProfileHeaderProps {
   user: UserProfile;
   isOwnProfile: boolean;
@@ -446,7 +464,14 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
               
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Account status:</span>
-                <span className="text-sm text-green-600">Active</span>
+                {(() => {
+                  const { status, isActive } = getAccountStatus((user as any)?.lastActive);
+                  return (
+                    <span className={`text-sm ${isActive ? 'text-green-600' : 'text-orange-500'}`}>
+                      {status}
+                    </span>
+                  );
+                })()}
               </div>
             </div>
           </div>
