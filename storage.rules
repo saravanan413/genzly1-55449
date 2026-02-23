@@ -1,36 +1,36 @@
-
 rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    
-    // 🖼 Posts (read-only)
-    match /posts/{userId}/{fileName} {
-      allow read: if true;
-    }
 
-    // 🎞 Reels (read-only)
-    match /reels/{userId}/{fileName} {
-      allow read: if true;
-    }
-
-    // 📸 Stories (read-only)
-    match /stories/{userId}/{fileName} {
-      allow read: if true;
-    }
-
-    // Profile Pictures (read-only)
     match /profilePictures/{userId}/{fileName} {
       allow read: if true;
+      allow write: if request.auth != null
+                   && request.auth.uid == userId
+                   && request.resource.size < 100 * 1024 * 1024;
     }
 
-    // Chat Media (read-only)
-    match /chats/{chatId}/{messageId}/{fileName} {
-      allow read: if request.auth != null
-        && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants);
+    match /posts/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null
+                   && request.auth.uid == userId
+                   && request.resource.size < 100 * 1024 * 1024;
     }
 
-    // Default Deny
+    match /reels/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null
+                   && request.auth.uid == userId
+                   && request.resource.size < 100 * 1024 * 1024;
+    }
+
+    match /stories/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null
+                   && request.auth.uid == userId
+                   && request.resource.size < 100 * 1024 * 1024;
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }

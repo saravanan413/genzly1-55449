@@ -8,10 +8,8 @@ import {
 
 /**
  * Convert any image to JPG with specified quality
- * Accepts: PNG, JPG, WEBP, HEIC, etc.
- * Returns: File object ready for Firebase Storage upload
  */
-export function convertImageToJpg(file: File, quality: number = 0.95): Promise<File> {
+export function convertImageToJpg(file: File, quality: number = 0.92): Promise<File> {
   return new Promise((resolve, reject) => {
     if (!file || !file.type.startsWith("image/")) {
       reject(new Error("Invalid image file"));
@@ -45,7 +43,7 @@ export function convertImageToJpg(file: File, quality: number = 0.95): Promise<F
 
             const jpgFile = new File(
               [blob],
-              file.name.replace(/\.[^/.]+$/, ".jpg"),
+              `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`,
               { type: "image/jpeg" }
             );
 
@@ -65,72 +63,55 @@ export function convertImageToJpg(file: File, quality: number = 0.95): Promise<F
   });
 }
 
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+
 /**
- * Upload image for profile, post, story
- * Paths:
- * - profilePictures/{uid}/{fileName}
- * - posts/{uid}/{fileName}
- * - stories/{uid}/{fileName}
+ * Upload image/video to Firebase Storage
+ * Paths: {folder}/{auth.uid}/{timestamp}_{random}.ext
  */
 export async function uploadImage({ 
   file, 
-  folder 
+  folder,
+  onProgress
 }: { 
   file: File; 
-  folder: "profilePictures" | "posts" | "stories";
+  folder: "profilePictures" | "posts" | "stories" | "reels";
+  onProgress?: (percent: number) => void;
 }): Promise<string> {
   const auth = getAuth();
   const user = auth.currentUser;
 
   if (!user) throw new Error("User not authenticated");
+  if (file.size > MAX_FILE_SIZE) throw new Error("File exceeds 100MB limit");
 
-  const jpgFile = await convertImageToJpg(file);
+  let uploadFile: File;
 
-  const storage = getStorage();
-  const path = `${folder}/${user.uid}/${jpgFile.name}`;
-  const storageRef = ref(storage, path);
-
-  const uploadTask = uploadBytesResumable(storageRef, jpgFile);
-
-  return new Promise((resolve, reject) => {
-    uploadTask.on(
-      "state_changed",
-      null,
-      reject,
-      async () => {
-        const url = await getDownloadURL(uploadTask.snapshot.ref);
-        resolve(url);
-      }
+  if (file.type.startsWith("image/")) {
+    uploadFile = await convertImageToJpg(file);
+  } else {
+    const ext = file.name.split(".").pop() || "mp4";
+    uploadFile = new File(
+      [file],
+      `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`,
+      { type: file.type }
     );
-  });
-}
-
-/**
- * Upload image in chat
- * Path: chats/{chatId}/{messageId}/{fileName}
- */
-export async function uploadChatImage(
-  file: File, 
-  chatId: string, 
-  messageId: string
-): Promise<string> {
-  const auth = getAuth();
-  const user = auth.currentUser;
-
-  if (!user) throw new Error("User not authenticated");
-
-  const jpgFile = await convertImageToJpg(file);
+  }
 
   const storage = getStorage();
-  const path = `chats/${chatId}/${messageId}/${jpgFile.name}`;
+  const path = `${folder}/${user.uid}/${uploadFile.name}`;
   const storageRef = ref(storage, path);
 
-  const uploadTask = uploadBytesResumable(storageRef, jpgFile);
+  const uploadTask = uploadBytesResumable(storageRef, uploadFile);
 
   return new Promise((resolve, reject) => {
     uploadTask.on(
       "state_changed",
-      null,
+      (snapshot) => {
+        const percent = Math.round(
+          (snapshot.bytesTransferred / snapshot.totalBytes) * 100
+        );
+        onProgress?.(percent);
+      },
       reject,
       async () => {
         const url = await getDownloadURL(uploadTask.snapshot.ref);

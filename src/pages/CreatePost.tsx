@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Image, Film, X, Send, Sparkles } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
@@ -25,7 +26,8 @@ const CreatePost = () => {
   const [contentType, setContentType] = useState<ContentType>('post');
   const [selectedMedia, setSelectedMedia] = useState<SelectedMedia | null>(null);
   const [caption, setCaption] = useState('');
-  const [loading, setLoading] = useState(false);
+const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -43,12 +45,12 @@ const CreatePost = () => {
       return;
     }
 
-    // Validate file size (50MB max)
-    const maxSize = 50 * 1024 * 1024;
+    // Validate file size (100MB max per storage rules)
+    const maxSize = 100 * 1024 * 1024;
     if (file.size > maxSize) {
       toast({
         title: "File too large",
-        description: "Please select a file smaller than 50MB",
+        description: "Please select a file smaller than 100MB",
         variant: "destructive"
       });
       return;
@@ -108,30 +110,23 @@ const CreatePost = () => {
     }
 
     setLoading(true);
+    setUploadProgress(0);
 
     try {
-      // Upload the image/video using the upload system
-      if (selectedMedia.type === 'image') {
-        const downloadUrl = await uploadImage({
-          file: selectedMedia.file,
-          folder: 'posts'
-        });
+      const folder = contentType === 'reel' ? 'reels' : 'posts';
+      
+      const downloadUrl = await uploadImage({
+        file: selectedMedia.file,
+        folder,
+        onProgress: (percent) => setUploadProgress(percent),
+      });
 
-        // TODO: Save post to Firestore with downloadUrl and caption
-        console.log('Post uploaded:', { downloadUrl, caption, type: contentType });
-        
-        toast({
-          title: "Post shared!",
-          description: "Your post has been shared successfully",
-        });
-      } else {
-        // For videos/reels - just show success for now
-        // Video upload would need separate handling
-        toast({
-          title: "Reel shared!",
-          description: "Your reel has been shared successfully",
-        });
-      }
+      console.log('Upload complete:', { downloadUrl, caption, type: contentType });
+
+      toast({
+        title: contentType === 'post' ? "Post shared!" : "Reel shared!",
+        description: `Your ${contentType} has been shared successfully`,
+      });
 
       navigate('/');
     } catch (error) {
@@ -143,6 +138,7 @@ const CreatePost = () => {
       });
     } finally {
       setLoading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -302,24 +298,25 @@ const CreatePost = () => {
               </div>
 
               {/* Share Button */}
-              <Button
-                onClick={handlePost}
-                disabled={loading}
-                className="w-full h-12 text-base font-semibold rounded-xl"
-                size="lg"
-              >
                 {loading ? (
-                  <div className="flex items-center gap-2">
-                    <div className="animate-spin rounded-full w-5 h-5 border-2 border-white border-t-transparent" />
-                    <span>Uploading...</span>
+                  <div className="space-y-3">
+                    <Progress value={uploadProgress} className="h-2" />
+                    <p className="text-sm text-muted-foreground text-center">
+                      Uploading... {uploadProgress}%
+                    </p>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <Send className="w-5 h-5" />
-                    <span>Share {contentType === 'post' ? 'Post' : 'Reel'}</span>
-                  </div>
+                  <Button
+                    onClick={handlePost}
+                    className="w-full h-12 text-base font-semibold rounded-xl"
+                    size="lg"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Send className="w-5 h-5" />
+                      <span>Share {contentType === 'post' ? 'Post' : 'Reel'}</span>
+                    </div>
+                  </Button>
                 )}
-              </Button>
             </div>
           )}
         </div>
