@@ -45,13 +45,13 @@ gcloud config set project genzly
 The `cors.json` file is already in your project root. Run:
 
 ```bash
-gsutil cors set cors.json gs://genzly.appspot.com
+gsutil cors set cors.json gs://genzly.firebasestorage.app
 ```
 
 ### Step 5: Verify CORS Configuration
 
 ```bash
-gsutil cors get gs://genzly.appspot.com
+gsutil cors get gs://genzly.firebasestorage.app
 ```
 
 You should see the CORS rules including all the `x-goog-upload-*` headers.
@@ -113,8 +113,8 @@ firebase.auth().currentUser
 ```
 
 ### Double-Check Bucket Name
-Your bucket is: `genzly.appspot.com`
-Console should log: `[Firebase] Using storage bucket: genzly.appspot.com`
+Your bucket is: `genzly.firebasestorage.app`
+Console should log: `[Firebase] Using storage bucket: genzly.firebasestorage.app`
 
 ---
 

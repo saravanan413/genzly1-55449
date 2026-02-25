@@ -51,7 +51,7 @@ const NotesBar = () => {
 
   const getProfileImageUrl = (user: any): string => {
     if (user?.userAvatar) return user.userAvatar;
-    if (user?.uid) return `https://firebasestorage.googleapis.com/v0/b/genzly.appspot.com/o/profiles%2F${user.uid}.jpg?alt=media`;
+    if (user?.uid) return `https://firebasestorage.googleapis.com/v0/b/genzly.firebasestorage.app/o/profiles%2F${user.uid}.jpg?alt=media`;
     return '';
   };
 
