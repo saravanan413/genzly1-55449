@@ -5,27 +5,46 @@ import {
   uploadBytesResumable,
   getDownloadURL
 } from "firebase/storage";
+import firebaseApp from "@/config/firebase";
 
 /**
  * Wait for Firebase Auth to resolve the current user.
+ * Forces a token refresh to ensure the auth token is valid.
  * Returns the User if signed in, or null after timeout.
  */
-function waitForAuth(timeoutMs = 10000): Promise<User | null> {
-  const auth = getAuth();
-  if (auth.currentUser) return Promise.resolve(auth.currentUser);
+async function waitForAuth(timeoutMs = 10000): Promise<User | null> {
+  const auth = getAuth(firebaseApp);
+  
+  let user = auth.currentUser;
+  
+  if (!user) {
+    // Wait for auth state to resolve
+    user = await new Promise<User | null>((resolve) => {
+      const timer = setTimeout(() => {
+        unsubscribe();
+        resolve(null);
+      }, timeoutMs);
 
-  return new Promise((resolve) => {
-    const timer = setTimeout(() => {
-      unsubscribe();
-      resolve(null);
-    }, timeoutMs);
-
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      clearTimeout(timer);
-      unsubscribe();
-      resolve(user);
+      const unsubscribe = onAuthStateChanged(auth, (u) => {
+        clearTimeout(timer);
+        unsubscribe();
+        resolve(u);
+      });
     });
-  });
+  }
+  
+  // Force token refresh to ensure valid credentials
+  if (user) {
+    try {
+      await user.getIdToken(true);
+      console.log("[Upload] Auth token refreshed for user:", user.uid);
+    } catch (err) {
+      console.error("[Upload] Token refresh failed:", err);
+      return null;
+    }
+  }
+  
+  return user;
 }
 
 /**
@@ -117,8 +136,9 @@ export async function uploadImage({
     );
   }
 
-  const storage = getStorage();
+  const storage = getStorage(firebaseApp);
   const path = `${folder}/${user.uid}/${uploadFile.name}`;
+  console.log("[Upload] Uploading to path:", path);
   const storageRef = ref(storage, path);
 
   const uploadTask = uploadBytesResumable(storageRef, uploadFile);
