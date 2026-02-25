@@ -9,7 +9,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyCZK3qtN0QDIp58ydNU9EZKnEQElOq0YtY",
   authDomain: "genzly.firebaseapp.com",
   projectId: "genzly",
-  storageBucket: "genzly.appspot.com",
+  storageBucket: "genzly.firebasestorage.app",
   messagingSenderId: "258142953440",
   appId: "1:258142953440:web:adb42fbb7a297ecfb21585",
   measurementId: "G-LXY0MPSTLT"
