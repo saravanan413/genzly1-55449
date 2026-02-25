@@ -1,10 +1,32 @@
-import { getAuth } from "firebase/auth";
+import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import {
   getStorage,
   ref,
   uploadBytesResumable,
   getDownloadURL
 } from "firebase/storage";
+
+/**
+ * Wait for Firebase Auth to resolve the current user.
+ * Returns the User if signed in, or null after timeout.
+ */
+function waitForAuth(timeoutMs = 10000): Promise<User | null> {
+  const auth = getAuth();
+  if (auth.currentUser) return Promise.resolve(auth.currentUser);
+
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      unsubscribe();
+      resolve(null);
+    }, timeoutMs);
+
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      clearTimeout(timer);
+      unsubscribe();
+      resolve(user);
+    });
+  });
+}
 
 /**
  * Convert any image to JPG with specified quality
@@ -78,10 +100,8 @@ export async function uploadImage({
   folder: "profilePictures" | "posts" | "stories" | "reels";
   onProgress?: (percent: number) => void;
 }): Promise<string> {
-  const auth = getAuth();
-  const user = auth.currentUser;
-
-  if (!user) throw new Error("User not authenticated");
+  const user = await waitForAuth();
+  if (!user) throw new Error("User not authenticated — Firebase Auth has not resolved. Make sure you are logged in.");
   if (file.size > MAX_FILE_SIZE) throw new Error("File exceeds 100MB limit");
 
   let uploadFile: File;
