@@ -1,4 +1,3 @@
-import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import {
   getStorage,
   ref,
@@ -7,44 +6,14 @@ import {
 } from "firebase/storage";
 import firebaseApp from "@/config/firebase";
 
-/**
- * Wait for Firebase Auth to resolve the current user.
- * Forces a token refresh to ensure the auth token is valid.
- * Returns the User if signed in, or null after timeout.
- */
-async function waitForAuth(timeoutMs = 10000): Promise<User | null> {
-  const auth = getAuth(firebaseApp);
-  
-  let user = auth.currentUser;
-  
-  if (!user) {
-    // Wait for auth state to resolve
-    user = await new Promise<User | null>((resolve) => {
-      const timer = setTimeout(() => {
-        unsubscribe();
-        resolve(null);
-      }, timeoutMs);
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 
-      const unsubscribe = onAuthStateChanged(auth, (u) => {
-        clearTimeout(timer);
-        unsubscribe();
-        resolve(u);
-      });
-    });
-  }
-  
-  // Force token refresh to ensure valid credentials
-  if (user) {
-    try {
-      await user.getIdToken(true);
-      console.log("[Upload] Auth token refreshed for user:", user.uid);
-    } catch (err) {
-      console.error("[Upload] Token refresh failed:", err);
-      return null;
-    }
-  }
-  
-  return user;
+/**
+ * Build storage path using the required folder structure:
+ * {folder}/{uid}/{filename}
+ */
+function buildUploadPath(folder: "profilePictures" | "posts" | "stories" | "reels", uid: string, fileName: string): string {
+  return `${folder}/${uid}/${fileName}`;
 }
 
 /**
@@ -104,23 +73,26 @@ export function convertImageToJpg(file: File, quality: number = 0.92): Promise<F
   });
 }
 
-const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
-
 /**
  * Upload image/video to Firebase Storage
- * Paths: {folder}/{auth.uid}/{timestamp}_{random}.ext
+ * Required paths:
+ * - posts/{uid}/{filename}
+ * - reels/{uid}/{filename}
+ * - stories/{uid}/{filename}
+ * - profilePictures/{uid}/{filename}
  */
-export async function uploadImage({ 
-  file, 
+export async function uploadImage({
+  file,
   folder,
+  uid,
   onProgress
-}: { 
-  file: File; 
+}: {
+  file: File;
   folder: "profilePictures" | "posts" | "stories" | "reels";
+  uid: string;
   onProgress?: (percent: number) => void;
 }): Promise<string> {
-  const user = await waitForAuth();
-  if (!user) throw new Error("User not authenticated — Firebase Auth has not resolved. Make sure you are logged in.");
+  if (!uid) throw new Error("User UID is required for upload");
   if (file.size > MAX_FILE_SIZE) throw new Error("File exceeds 100MB limit");
 
   let uploadFile: File;
@@ -137,10 +109,11 @@ export async function uploadImage({
   }
 
   const storage = getStorage(firebaseApp);
-  const path = `${folder}/${user.uid}/${uploadFile.name}`;
+  const path = buildUploadPath(folder, uid, uploadFile.name);
+  console.log("[Upload] Current user uid:", uid);
   console.log("[Upload] Uploading to path:", path);
-  const storageRef = ref(storage, path);
 
+  const storageRef = ref(storage, path);
   const uploadTask = uploadBytesResumable(storageRef, uploadFile);
 
   return new Promise((resolve, reject) => {

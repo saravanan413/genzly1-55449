@@ -20,7 +20,7 @@ interface SelectedMedia {
 const CreatePost = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { currentUser } = useAuth();
+  const { currentUser, loading: authLoading } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [contentType, setContentType] = useState<ContentType>('post');
@@ -100,6 +100,15 @@ const [loading, setLoading] = useState(false);
       return;
     }
 
+    if (authLoading) {
+      toast({
+        title: "Please wait",
+        description: "Auth is still initializing. Try again in a moment.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!currentUser) {
       toast({
         title: "Not logged in",
@@ -114,10 +123,18 @@ const [loading, setLoading] = useState(false);
 
     try {
       const folder = contentType === 'reel' ? 'reels' : 'posts';
-      
+      const expectedPath = `${folder}/${currentUser.uid}/${selectedMedia.file.name}`;
+
+      console.log('[CreatePost] currentUser:', {
+        uid: currentUser.uid,
+        email: currentUser.email,
+      });
+      console.log('[CreatePost] Expected upload path:', expectedPath);
+
       const downloadUrl = await uploadImage({
         file: selectedMedia.file,
         folder,
+        uid: currentUser.uid,
         onProgress: (percent) => setUploadProgress(percent),
       });
 
@@ -160,7 +177,7 @@ const [loading, setLoading] = useState(false);
             variant="ghost"
             size="sm"
             onClick={handlePost}
-            disabled={!selectedMedia || loading}
+            disabled={!selectedMedia || loading || authLoading || !currentUser}
             className="text-primary font-semibold hover:bg-primary/10"
           >
             {loading ? (
@@ -298,25 +315,26 @@ const [loading, setLoading] = useState(false);
               </div>
 
               {/* Share Button */}
-                {loading ? (
-                  <div className="space-y-3">
-                    <Progress value={uploadProgress} className="h-2" />
-                    <p className="text-sm text-muted-foreground text-center">
-                      Uploading... {uploadProgress}%
-                    </p>
+              {loading ? (
+                <div className="space-y-3">
+                  <Progress value={uploadProgress} className="h-2" />
+                  <p className="text-sm text-muted-foreground text-center">
+                    Uploading... {uploadProgress}%
+                  </p>
+                </div>
+              ) : (
+                <Button
+                  onClick={handlePost}
+                  disabled={loading || authLoading || !currentUser}
+                  className="w-full h-12 text-base font-semibold rounded-xl"
+                  size="lg"
+                >
+                  <div className="flex items-center gap-2">
+                    <Send className="w-5 h-5" />
+                    <span>Share {contentType === 'post' ? 'Post' : 'Reel'}</span>
                   </div>
-                ) : (
-                  <Button
-                    onClick={handlePost}
-                    className="w-full h-12 text-base font-semibold rounded-xl"
-                    size="lg"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Send className="w-5 h-5" />
-                      <span>Share {contentType === 'post' ? 'Post' : 'Reel'}</span>
-                    </div>
-                  </Button>
-                )}
+                </Button>
+              )}
             </div>
           )}
         </div>
