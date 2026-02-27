@@ -1,10 +1,9 @@
 import {
-  getStorage,
   ref,
   uploadBytesResumable,
   getDownloadURL
 } from "firebase/storage";
-import firebaseApp from "@/config/firebase";
+import { storage } from "@/config/firebase";
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 
@@ -108,7 +107,6 @@ export async function uploadImage({
     );
   }
 
-  const storage = getStorage(firebaseApp);
   const path = buildUploadPath(folder, uid, uploadFile.name);
   console.log("[Upload] Current user uid:", uid);
   console.log("[Upload] Uploading to path:", path);

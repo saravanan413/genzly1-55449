@@ -1,12 +1,10 @@
-import { getAuth } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { db, checkRateLimit, formatSecurityError } from '../config/firebase';
+import { auth, db, checkRateLimit, formatSecurityError } from '../config/firebase';
 import { logger } from '../utils/logger';
 
 export class SecurityService {
   // Validate user authentication for any operation
   static validateAuth(): { isValid: boolean; userId?: string; error?: any } {
-    const auth = getAuth();
     const user = auth.currentUser;
     
     if (!user) {
