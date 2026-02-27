@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { uploadImage } from '@/services/imageUpload';
+import { auth } from '@/config/firebase';
 import { useAuth } from '@/contexts/AuthContext';
-
 type MediaType = 'image' | 'video' | null;
 type ContentType = 'post' | 'reel';
 
@@ -125,6 +125,7 @@ const [loading, setLoading] = useState(false);
       const folder = contentType === 'reel' ? 'reels' : 'posts';
       const expectedPath = `${folder}/${currentUser.uid}/${selectedMedia.file.name}`;
 
+      console.log('Auth user:', auth.currentUser);
       console.log('[CreatePost] currentUser:', {
         uid: currentUser.uid,
         email: currentUser.email,
