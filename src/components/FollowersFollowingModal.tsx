@@ -218,6 +218,21 @@ const FollowersFollowingModal: React.FC<FollowersFollowingModalProps> = ({
             <X size={20} />
           </button>
         </div>
+
+        {/* Search Bar */}
+        {users.length > 0 && (
+          <div className="px-4 pb-3 border-b border-border">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search"
+                className="pl-9 h-9 bg-muted border-0 rounded-lg text-sm"
+              />
+            </div>
+          </div>
+        )}
         
         <div className="flex-1 overflow-y-auto">
           {loading ? (
