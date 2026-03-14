@@ -240,9 +240,9 @@ const FollowersFollowingModal: React.FC<FollowersFollowingModalProps> = ({
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
               <p className="mt-2 text-sm text-muted-foreground">Loading {type}...</p>
             </div>
-          ) : users.length > 0 ? (
+          ) : filteredUsers.length > 0 ? (
             <div className="divide-y">
-              {users.map((followData) => {
+              {filteredUsers.map((followData) => {
                 const userInfo = type === 'followers' ? followData.followerInfo : followData.followedInfo;
                 const userId = type === 'followers' ? followData.followerId : followData.followedId;
                 const avatarUrl = userInfo.avatar || getFallbackAvatar();
