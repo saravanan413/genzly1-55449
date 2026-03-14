@@ -1,8 +1,9 @@
 
-import React, { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
+import { X, Search } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { getFollowers, getFollowing, FollowData, unfollowUser, removeFollower } from '../services/follow';
 import { useAuth } from '../contexts/AuthContext';
