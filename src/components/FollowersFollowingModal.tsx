@@ -187,6 +187,24 @@ const FollowersFollowingModal: React.FC<FollowersFollowingModalProps> = ({
     return '/lovable-uploads/07e28f82-bd38-410c-a208-5db174616626.png';
   };
 
+  // Filter users based on search query
+  const filteredUsers = useMemo(() => {
+    if (!searchQuery.trim()) return users;
+    const query = searchQuery.toLowerCase();
+    return users.filter((followData) => {
+      const userInfo = type === 'followers' ? followData.followerInfo : followData.followedInfo;
+      return (
+        userInfo.username?.toLowerCase().includes(query) ||
+        userInfo.displayName?.toLowerCase().includes(query)
+      );
+    });
+  }, [users, searchQuery, type]);
+
+  // Reset search when modal opens/closes
+  useEffect(() => {
+    if (!isOpen) setSearchQuery('');
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
