@@ -27,6 +27,7 @@ const FollowersFollowingModal: React.FC<FollowersFollowingModalProps> = ({
   const [users, setUsers] = useState<FollowData[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const targetUserId = userId || currentUser?.uid;
   const isOwnProfile = targetUserId === currentUser?.uid;
