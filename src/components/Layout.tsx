@@ -25,14 +25,14 @@ const Layout = ({ children }: LayoutProps) => {
   const isAddStoryPage = location.pathname === '/add-story';
   const isStoryViewerPage = location.pathname.startsWith('/story/');
 
-  // Pages that should hide the sidebar
+  // Pages that should hide the sidebar on mobile only
   const isSidebarHiddenPage = isChatPage || isEditProfilePage || isUserProfilePage;
   const isProfilePage = location.pathname === '/profile';
   const isReelsPage = location.pathname === '/reels';
   const isCreatePage = location.pathname === '/create';
 
-  // Show sidebar on most pages, but not on specific full-width pages
-  const showSidebar = !(isSidebarHiddenPage || isProfilePage || isReelsPage || isCreatePage);
+  // Always show sidebar on desktop
+  const showSidebar = true;
 
   // Hide header on certain pages
   const isHeaderHiddenPage = isChatPage || isEditProfilePage || isUserProfilePage || isReelsPage || isCreatePage;
