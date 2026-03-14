@@ -48,7 +48,7 @@ const ChatList: React.FC<ChatListProps> = ({
   onHideChat,
 }) => {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
-  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
+  const [longPressTimer, setLongPressTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [isLongPress, setIsLongPress] = useState(false);
 
   const filteredChats = useMemo(() => {

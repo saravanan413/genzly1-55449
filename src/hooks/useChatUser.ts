@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { getChatUser } from '../services/chat/userService';
 
-const DEBUG_MODE = process.env.NODE_ENV === 'development';
+const DEBUG_MODE = import.meta.env.DEV;
 
 const debugLog = (message: string, ...args: unknown[]) => {
   if (DEBUG_MODE) {

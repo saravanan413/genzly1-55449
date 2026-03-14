@@ -8,7 +8,7 @@ interface LogContext {
 }
 
 class Logger {
-  private isDevelopment = process.env.NODE_ENV === 'development';
+  private isDevelopment = import.meta.env.DEV;
   
   private formatMessage(level: LogLevel, message: string, context?: LogContext): string {
     const timestamp = new Date().toISOString();
@@ -92,7 +92,7 @@ class Logger {
 
   // Disable console methods in production to prevent any leaks
   static disableConsoleInProduction() {
-    if (process.env.NODE_ENV === 'production') {
+    if (import.meta.env.PROD) {
       const noop = () => {};
       // eslint-disable-next-line no-console
       console.log = noop;
