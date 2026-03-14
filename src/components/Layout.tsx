@@ -31,9 +31,6 @@ const Layout = ({ children }: LayoutProps) => {
   const isReelsPage = location.pathname === '/reels';
   const isCreatePage = location.pathname === '/create';
 
-  // Hide header on certain pages (but NOT create page on desktop)
-  const isHeaderHiddenOnMobile = isChatPage || isEditProfilePage || isUserProfilePage || isReelsPage || isCreatePage;
-
   // Always show sidebar on desktop
   const showSidebar = true;
 
