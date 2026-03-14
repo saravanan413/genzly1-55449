@@ -167,7 +167,7 @@ const Layout = ({ children }: LayoutProps) => {
       )}
 
       {/* Main Content */}
-      <div className={`${(isSidebarHiddenPage || isProfilePage || isReelsPage || isCreatePage) ? 'w-full' : 'md:ml-64'} min-h-screen`}>
+      <div className={`md:ml-64 min-h-screen`}>
         <div className={`${!isHeaderHiddenPage ? 'pt-16 md:pt-0' : 'pt-0'} ${showBottomNav ? 'pb-20 md:pb-4' : ''}`}>
           {renderContent()}
         </div>
