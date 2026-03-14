@@ -1,8 +1,9 @@
 
-import React, { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
+import { X, Search } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { getFollowers, getFollowing, FollowData, unfollowUser, removeFollower } from '../services/follow';
 import { useAuth } from '../contexts/AuthContext';
@@ -26,6 +27,7 @@ const FollowersFollowingModal: React.FC<FollowersFollowingModalProps> = ({
   const [users, setUsers] = useState<FollowData[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const targetUserId = userId || currentUser?.uid;
   const isOwnProfile = targetUserId === currentUser?.uid;
@@ -185,6 +187,24 @@ const FollowersFollowingModal: React.FC<FollowersFollowingModalProps> = ({
     return '/lovable-uploads/07e28f82-bd38-410c-a208-5db174616626.png';
   };
 
+  // Filter users based on search query
+  const filteredUsers = useMemo(() => {
+    if (!searchQuery.trim()) return users;
+    const query = searchQuery.toLowerCase();
+    return users.filter((followData) => {
+      const userInfo = type === 'followers' ? followData.followerInfo : followData.followedInfo;
+      return (
+        userInfo.username?.toLowerCase().includes(query) ||
+        userInfo.displayName?.toLowerCase().includes(query)
+      );
+    });
+  }, [users, searchQuery, type]);
+
+  // Reset search when modal opens/closes
+  useEffect(() => {
+    if (!isOpen) setSearchQuery('');
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
@@ -198,6 +218,21 @@ const FollowersFollowingModal: React.FC<FollowersFollowingModalProps> = ({
             <X size={20} />
           </button>
         </div>
+
+        {/* Search Bar */}
+        {users.length > 0 && (
+          <div className="px-4 pb-3 border-b border-border">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search"
+                className="pl-9 h-9 bg-muted border-0 rounded-lg text-sm"
+              />
+            </div>
+          </div>
+        )}
         
         <div className="flex-1 overflow-y-auto">
           {loading ? (
@@ -205,9 +240,9 @@ const FollowersFollowingModal: React.FC<FollowersFollowingModalProps> = ({
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
               <p className="mt-2 text-sm text-muted-foreground">Loading {type}...</p>
             </div>
-          ) : users.length > 0 ? (
+          ) : filteredUsers.length > 0 ? (
             <div className="divide-y">
-              {users.map((followData) => {
+              {filteredUsers.map((followData) => {
                 const userInfo = type === 'followers' ? followData.followerInfo : followData.followedInfo;
                 const userId = type === 'followers' ? followData.followerId : followData.followedId;
                 const avatarUrl = userInfo.avatar || getFallbackAvatar();
@@ -281,15 +316,19 @@ const FollowersFollowingModal: React.FC<FollowersFollowingModalProps> = ({
           ) : (
             <div className="text-center text-muted-foreground py-10">
               <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">👤</span>
+                <span className="text-2xl">{searchQuery ? '🔍' : '👤'}</span>
               </div>
-              <p className="text-sm">No {type} yet</p>
-              <p className="text-xs mt-1">
-                {type === 'followers' 
-                  ? 'When people follow this account, they\'ll appear here.' 
-                  : 'When this account follows people, they\'ll appear here.'
-                }
+              <p className="text-sm">
+                {searchQuery ? `No results for "${searchQuery}"` : `No ${type} yet`}
               </p>
+              {!searchQuery && (
+                <p className="text-xs mt-1">
+                  {type === 'followers' 
+                    ? 'When people follow this account, they\'ll appear here.' 
+                    : 'When this account follows people, they\'ll appear here.'
+                  }
+                </p>
+              )}
             </div>
           )}
         </div>
