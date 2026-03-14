@@ -316,15 +316,19 @@ const FollowersFollowingModal: React.FC<FollowersFollowingModalProps> = ({
           ) : (
             <div className="text-center text-muted-foreground py-10">
               <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">👤</span>
+                <span className="text-2xl">{searchQuery ? '🔍' : '👤'}</span>
               </div>
-              <p className="text-sm">No {type} yet</p>
-              <p className="text-xs mt-1">
-                {type === 'followers' 
-                  ? 'When people follow this account, they\'ll appear here.' 
-                  : 'When this account follows people, they\'ll appear here.'
-                }
+              <p className="text-sm">
+                {searchQuery ? `No results for "${searchQuery}"` : `No ${type} yet`}
               </p>
+              {!searchQuery && (
+                <p className="text-xs mt-1">
+                  {type === 'followers' 
+                    ? 'When people follow this account, they\'ll appear here.' 
+                    : 'When this account follows people, they\'ll appear here.'
+                  }
+                </p>
+              )}
             </div>
           )}
         </div>
