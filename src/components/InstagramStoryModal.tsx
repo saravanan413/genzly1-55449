@@ -40,7 +40,7 @@ const InstagramStoryModal: React.FC<InstagramStoryModalProps> = ({
   const [progress, setProgress] = useState(0);
   const [paused, setPaused] = useState(false);
   const [showViewers, setShowViewers] = useState(false);
-  const progressRef = useRef<NodeJS.Timeout | null>(null);
+  const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     setCurrentIndex(initialIndex || 0);

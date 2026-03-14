@@ -92,7 +92,7 @@ class Logger {
 
   // Disable console methods in production to prevent any leaks
   static disableConsoleInProduction() {
-    if (process.env.NODE_ENV === 'production') {
+    if (import.meta.env.PROD) {
       const noop = () => {};
       // eslint-disable-next-line no-console
       console.log = noop;
