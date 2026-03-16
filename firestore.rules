@@ -128,8 +128,8 @@ service cloud.firestore {
       // Only signed-in users can create posts
       allow create: if request.auth != null
         && request.resource.data.userId == request.auth.uid
-        && request.resource.data.mediaURL is string
-        && request.resource.data.mediaURL.size() > 0
+        && request.resource.data.mediaUrl is string
+        && request.resource.data.mediaUrl.size() > 0
         && request.resource.data.timestamp == request.time;
 
       // Only owner can update/delete
@@ -166,8 +166,8 @@ service cloud.firestore {
       // Only signed-in users can create reels
       allow create: if request.auth != null
         && request.resource.data.userId == request.auth.uid
-        && request.resource.data.mediaURL is string
-        && request.resource.data.mediaURL.size() > 0
+        && request.resource.data.mediaUrl is string
+        && request.resource.data.mediaUrl.size() > 0
         && request.resource.data.timestamp == request.time;
 
       // Only owner can update/delete
