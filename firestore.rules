@@ -121,11 +121,18 @@ service cloud.firestore {
       }
     }
     
-    // 🖼 Posts (read-only, no creation)
+    // 🖼 Posts
     match /posts/{postId} {
       allow read: if true;
 
-      // Only owner can update/delete existing posts
+      // Only signed-in users can create posts
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.mediaURL is string
+        && request.resource.data.mediaURL.size() > 0
+        && request.resource.data.timestamp == request.time;
+
+      // Only owner can update/delete
       allow update, delete: if request.auth != null
         && request.auth.uid == resource.data.userId;
 
@@ -151,21 +158,19 @@ service cloud.firestore {
           && request.auth.uid == resource.data.userId;
       }
     }
-    
-    // Stories (read-only, no creation)
-    match /stories/{storyId} {
-      allow read: if request.auth != null;
-      allow update: if request.auth != null && 
-        request.auth.uid == resource.data.userId;
-      allow delete: if request.auth != null && 
-        request.auth.uid == resource.data.userId;
-    }
-    
-    // 🎞 Reels (read-only, no creation)
+
+    // 🎞 Reels
     match /reels/{reelId} {
       allow read: if true;
 
-      // Only owner can update/delete existing reels
+      // Only signed-in users can create reels
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.mediaURL is string
+        && request.resource.data.mediaURL.size() > 0
+        && request.resource.data.timestamp == request.time;
+
+      // Only owner can update/delete
       allow update, delete: if request.auth != null
         && request.auth.uid == resource.data.userId;
 
@@ -190,6 +195,18 @@ service cloud.firestore {
         allow delete: if request.auth != null
           && request.auth.uid == resource.data.userId;
       }
+    }
+
+    // 📸 Stories
+    match /stories/{storyId} {
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null &&
+        request.auth.uid == resource.data.uid;
+      allow read: if resource.data.privacy == 'everyone'
+        || (resource.data.privacy == 'followers' &&
+            request.auth != null &&
+            exists(/databases/$(database)/documents/users/$(resource.data.uid)/followers/$(request.auth.uid)))
+        || (request.auth != null && request.auth.uid == resource.data.uid);
     }
 
     // Reports - only authenticated users can create reports, only admins can read
