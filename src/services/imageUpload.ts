@@ -3,7 +3,7 @@ import {
   uploadBytesResumable,
   getDownloadURL
 } from "firebase/storage";
-import { storage } from "@/config/firebase";
+import { storage, auth } from "@/config/firebase";
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 
