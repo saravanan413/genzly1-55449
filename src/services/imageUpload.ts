@@ -3,7 +3,7 @@ import {
   uploadBytesResumable,
   getDownloadURL
 } from "firebase/storage";
-import { storage } from "@/config/firebase";
+import { storage, auth } from "@/config/firebase";
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 
@@ -93,6 +93,9 @@ export async function uploadImage({
 }): Promise<string> {
   console.log("[Upload] === UPLOAD DEBUG START ===");
   console.log("[Upload] Auth uid param:", uid);
+  console.log("[Upload] auth.currentUser:", auth.currentUser);
+  console.log("[Upload] auth.currentUser?.uid:", auth.currentUser?.uid);
+  console.log("[Upload] Token check:", await auth.currentUser?.getIdToken().catch(e => `TOKEN ERROR: ${e.message}`));
   console.log("[Upload] Storage bucket:", storage.app.options.storageBucket);
   console.log("[Upload] Original file:", { name: file.name, size: file.size, type: file.type });
   console.log("[Upload] Folder:", folder);
