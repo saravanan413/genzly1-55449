@@ -93,6 +93,9 @@ export async function uploadImage({
 }): Promise<string> {
   console.log("[Upload] === UPLOAD DEBUG START ===");
   console.log("[Upload] Auth uid param:", uid);
+  console.log("[Upload] auth.currentUser:", auth.currentUser);
+  console.log("[Upload] auth.currentUser?.uid:", auth.currentUser?.uid);
+  console.log("[Upload] Token check:", await auth.currentUser?.getIdToken().catch(e => `TOKEN ERROR: ${e.message}`));
   console.log("[Upload] Storage bucket:", storage.app.options.storageBucket);
   console.log("[Upload] Original file:", { name: file.name, size: file.size, type: file.type });
   console.log("[Upload] Folder:", folder);
