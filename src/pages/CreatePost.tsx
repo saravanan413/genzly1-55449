@@ -147,11 +147,15 @@ const [loading, setLoading] = useState(false);
       });
 
       navigate('/');
-    } catch (error) {
-      console.error('Upload error:', error);
+    } catch (error: any) {
+      console.error('[CreatePost] === UPLOAD FAILED ===');
+      console.error('[CreatePost] Error code:', error?.code);
+      console.error('[CreatePost] Error message:', error?.message);
+      console.error('[CreatePost] Server response:', error?.serverResponse);
+      console.error('[CreatePost] Full error:', error);
       toast({
         title: "Upload failed",
-        description: "Failed to upload your content. Please try again.",
+        description: `${error?.code || 'unknown'}: ${error?.message || 'Failed to upload your content'}`,
         variant: "destructive"
       });
     } finally {
