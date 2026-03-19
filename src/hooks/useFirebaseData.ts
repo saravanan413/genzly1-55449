@@ -1,85 +1,131 @@
 
 import { useState, useEffect } from 'react';
-import { DocumentSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, limit, onSnapshot, where, DocumentSnapshot } from 'firebase/firestore';
+import { db } from '../config/firebase';
 import {
-  getFeedPosts,
-  getUserPosts,
-  getReels,
-  getActiveStories,
   getUserProfile,
   getFollowStats,
+  getActiveStories,
   Post,
   Reel,
   Story,
   UserProfile
 } from '../services/firestoreService';
 
+/**
+ * Real-time feed posts for Explore page — only public posts
+ */
 export const useFeedPosts = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const [hasMore, setHasMore] = useState(true);
-  const [lastDoc, setLastDoc] = useState<DocumentSnapshot | null>(null);
-
-  const loadPosts = async (refresh = false) => {
-    setLoading(true);
-    try {
-      const { posts: newPosts, lastDoc: newLastDoc } = await getFeedPosts(
-        refresh ? undefined : lastDoc
-      );
-      
-      if (refresh) {
-        setPosts(newPosts);
-      } else {
-        setPosts(prev => [...prev, ...newPosts]);
-      }
-      
-      setLastDoc(newLastDoc);
-      setHasMore(newPosts.length > 0);
-    } catch (error) {
-      console.error('Error loading posts:', error);
-    }
-    setLoading(false);
-  };
+  const [hasMore, setHasMore] = useState(false);
 
   useEffect(() => {
-    loadPosts(true);
-  }, []);
+    setLoading(true);
 
-  const refreshPosts = () => loadPosts(true);
-  const loadMorePosts = () => {
-    if (!loading && hasMore) {
-      loadPosts();
-    }
-  };
+    const q = query(
+      collection(db, 'posts'),
+      where('privacy', 'in', ['public', '']),
+      orderBy('timestamp', 'desc'),
+      limit(50)
+    );
+
+    // Fallback query without privacy filter (for posts without privacy field)
+    const qFallback = query(
+      collection(db, 'posts'),
+      orderBy('timestamp', 'desc'),
+      limit(50)
+    );
+
+    const unsub = onSnapshot(
+      qFallback,
+      (snapshot) => {
+        const allPosts = snapshot.docs
+          .map((docSnap) => {
+            const data = docSnap.data();
+            return {
+              id: docSnap.id,
+              ...data,
+              user: {
+                username: data.username || 'unknown',
+                displayName: data.displayName || 'Unknown User',
+                avatar: data.userAvatar,
+              },
+            } as Post;
+          })
+          // Client-side filter: only public or unset privacy
+          .filter((post) => {
+            const raw = snapshot.docs.find((d) => d.id === post.id)?.data();
+            return !raw?.privacy || raw.privacy === 'public';
+          });
+
+        setPosts(allPosts);
+        setLoading(false);
+      },
+      (err) => {
+        console.error('[useFeedPosts] Error:', err);
+        setLoading(false);
+      }
+    );
+
+    return () => unsub();
+  }, []);
 
   return {
     posts,
     loading,
     hasMore,
-    refreshPosts,
-    loadMorePosts
+    refreshPosts: () => {},
+    loadMorePosts: () => {},
   };
 };
 
+/**
+ * Real-time user posts for profile pages
+ */
 export const useUserPosts = (userId: string) => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!userId) return;
-
-    const loadUserPosts = async () => {
-      setLoading(true);
-      try {
-        const userPosts = await getUserPosts(userId);
-        setPosts(userPosts);
-      } catch (error) {
-        console.error('Error loading user posts:', error);
-      }
+    if (!userId) {
       setLoading(false);
-    };
+      return;
+    }
 
-    loadUserPosts();
+    setLoading(true);
+
+    const q = query(
+      collection(db, 'posts'),
+      where('userId', '==', userId),
+      orderBy('timestamp', 'desc')
+    );
+
+    const unsub = onSnapshot(
+      q,
+      (snapshot) => {
+        const userPosts = snapshot.docs.map((docSnap) => {
+          const data = docSnap.data();
+          return {
+            id: docSnap.id,
+            ...data,
+            user: {
+              username: data.username || 'unknown',
+              displayName: data.displayName || 'Unknown User',
+              avatar: data.userAvatar,
+            },
+          } as Post;
+        });
+        setPosts(userPosts);
+        setLoading(false);
+      },
+      (err) => {
+        console.error('[useUserPosts] Error:', err);
+        setLoading(false);
+      }
+    );
+
+    return () => unsub();
   }, [userId]);
 
   return { posts, loading };
@@ -88,33 +134,57 @@ export const useUserPosts = (userId: string) => {
 export const useReels = () => {
   const [reels, setReels] = useState<Reel[]>([]);
   const [loading, setLoading] = useState(true);
-  const [hasMore, setHasMore] = useState(true);
-  const [lastDoc, setLastDoc] = useState<DocumentSnapshot | null>(null);
-
-  const loadReels = async () => {
-    if (loading) return;
-    
-    setLoading(true);
-    try {
-      const { reels: newReels, lastDoc: newLastDoc } = await getReels(lastDoc);
-      setReels(prev => [...prev, ...newReels]);
-      setLastDoc(newLastDoc);
-      setHasMore(newReels.length > 0);
-    } catch (error) {
-      console.error('Error loading reels:', error);
-    }
-    setLoading(false);
-  };
+  const [hasMore, setHasMore] = useState(false);
 
   useEffect(() => {
-    loadReels();
+    setLoading(true);
+
+    const q = query(
+      collection(db, 'reels'),
+      orderBy('timestamp', 'desc'),
+      limit(20)
+    );
+
+    const unsub = onSnapshot(
+      q,
+      (snapshot) => {
+        const allReels = snapshot.docs
+          .map((docSnap) => {
+            const data = docSnap.data();
+            return {
+              id: docSnap.id,
+              ...data,
+              videoURL: data.videoURL || data.mediaURL,
+              user: {
+                username: data.username || 'unknown',
+                displayName: data.displayName || 'Unknown User',
+                avatar: data.userAvatar,
+              },
+            } as Reel;
+          })
+          // Only public reels
+          .filter((reel) => {
+            const raw = snapshot.docs.find((d) => d.id === reel.id)?.data();
+            return !raw?.privacy || raw.privacy === 'public';
+          });
+
+        setReels(allReels);
+        setLoading(false);
+      },
+      (err) => {
+        console.error('[useReels] Error:', err);
+        setLoading(false);
+      }
+    );
+
+    return () => unsub();
   }, []);
 
   return {
     reels,
     loading,
     hasMore,
-    loadMoreReels: loadReels
+    loadMoreReels: () => {},
   };
 };
 

@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, limit, onSnapshot, startAfter, getDocs, where } from 'firebase/firestore';
+import { collection, query, orderBy, limit, onSnapshot, where, getDocs } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { Post } from '../types/index';
@@ -17,260 +17,146 @@ interface FirestorePostData {
   userId: string;
   username: string;
   userAvatar?: string;
+  displayName?: string;
   mediaURL: string;
   mediaType: 'image' | 'video';
   caption: string;
   timestamp: any;
-  likes: string[];
+  privacy?: string;
+  followersOnly?: boolean;
   likeCount: number;
-  comments: any[];
   commentCount: number;
   location?: string;
   category?: string;
-  displayName?: string;
 }
 
-export const useFeedData = ({ pageSize = 10, userId, category }: UseFeedDataProps = {}) => {
+function mapPostDoc(docSnap: any): Post {
+  const data = docSnap.data() as FirestorePostData;
+  return {
+    id: docSnap.id,
+    userId: data.userId || '',
+    username: data.username || '',
+    userAvatar: data.userAvatar,
+    mediaURL: data.mediaURL || '',
+    mediaType: data.mediaType || 'image',
+    caption: data.caption || '',
+    timestamp: data.timestamp,
+    likes: [],
+    likeCount: data.likeCount || 0,
+    comments: [],
+    commentCount: data.commentCount || 0,
+    location: data.location,
+    category: data.category,
+    user: {
+      username: data.username || 'unknown',
+      displayName: data.displayName || 'Unknown User',
+      avatar: data.userAvatar,
+    },
+  } as Post;
+}
+
+export const useFeedData = ({ pageSize = 20, userId, category }: UseFeedDataProps = {}) => {
   const { currentUser } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const [hasMore, setHasMore] = useState(true);
-  const [lastVisible, setLastVisible] = useState<any>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [followingList, setFollowingList] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Fetch the current user's following list
   useEffect(() => {
-    let isMounted = true;
+    if (!currentUser) return;
 
-    const fetchInitialData = async () => {
-      setLoading(true);
-      setError(null);
+    const followingRef = collection(db, 'users', currentUser.uid, 'following');
+    const unsub = onSnapshot(followingRef, (snap) => {
+      setFollowingList(snap.docs.map((d) => d.id));
+    });
 
-      try {
-        let q;
-        if (userId) {
-          // Fetch posts for a specific user
-          q = query(
-            collection(db, 'posts'),
-            where('userId', '==', userId),
-            orderBy('timestamp', 'desc'),
-            limit(pageSize)
-          );
-        } else if (category) {
-          // Fetch posts for a specific category
-           q = query(
-            collection(db, 'posts'),
-            where('category', '==', category),
-            orderBy('timestamp', 'desc'),
-            limit(pageSize)
-          );
-        }
-        else {
-          // Fetch all posts
-          q = query(
-            collection(db, 'posts'),
-            orderBy('timestamp', 'desc'),
-            limit(pageSize)
-          );
-        }
+    return () => unsub();
+  }, [currentUser]);
 
-        const snapshot = await getDocs(q);
-
-        if (isMounted) {
-          const newPosts = snapshot.docs.map(doc => {
-            const data = doc.data() as FirestorePostData;
-            return {
-              id: doc.id,
-              userId: data.userId || '',
-              username: data.username || '',
-              userAvatar: data.userAvatar,
-              mediaURL: data.mediaURL || '',
-              mediaType: data.mediaType || 'image',
-              caption: data.caption || '',
-              timestamp: data.timestamp,
-              likes: data.likes || [],
-              likeCount: data.likeCount || 0,
-              comments: data.comments || [],
-              commentCount: data.commentCount || 0,
-              location: data.location,
-              category: data.category,
-              user: {
-                username: data.username || 'unknown',
-                displayName: data.displayName || 'Unknown User',
-                avatar: data.userAvatar
-              }
-            } as Post;
-          });
-          setPosts(newPosts);
-          setHasMore(newPosts.length === pageSize);
-          setLastVisible(snapshot.docs[newPosts.length - 1] || null);
-        }
-      } catch (err: any) {
-        if (isMounted) {
-          setError(err.message);
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchInitialData();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [pageSize, userId, category]);
-
-  const fetchMoreData = async () => {
-    if (!hasMore || loading || !lastVisible) return;
-
+  // Real-time listener for posts
+  useEffect(() => {
     setLoading(true);
     setError(null);
 
-    try {
-      let q;
-       if (userId) {
-          // Fetch posts for a specific user
-          q = query(
-            collection(db, 'posts'),
-            where('userId', '==', userId),
-            orderBy('timestamp', 'desc'),
-            startAfter(lastVisible),
-            limit(pageSize)
-          );
-        } else if (category) {
-          // Fetch posts for a specific category
-           q = query(
-            collection(db, 'posts'),
-            where('category', '==', category),
-            orderBy('timestamp', 'desc'),
-            startAfter(lastVisible),
-            limit(pageSize)
-          );
-        }
-        else {
-          // Fetch all posts
-          q = query(
-            collection(db, 'posts'),
-            orderBy('timestamp', 'desc'),
-            startAfter(lastVisible),
-            limit(pageSize)
-          );
-        }
-
-      const snapshot = await getDocs(q);
-
-      const newPosts = snapshot.docs.map(doc => {
-        const data = doc.data() as FirestorePostData;
-        return {
-          id: doc.id,
-          userId: data.userId || '',
-          username: data.username || '',
-          userAvatar: data.userAvatar,
-          mediaURL: data.mediaURL || '',
-          mediaType: data.mediaType || 'image',
-          caption: data.caption || '',
-          timestamp: data.timestamp,
-          likes: data.likes || [],
-          likeCount: data.likeCount || 0,
-          comments: data.comments || [],
-          commentCount: data.commentCount || 0,
-          location: data.location,
-          category: data.category,
-          user: {
-            username: data.username || 'unknown',
-            displayName: data.displayName || 'Unknown User',
-            avatar: data.userAvatar
-          }
-        } as Post;
-      });
-      setPosts(prevPosts => [...prevPosts, ...newPosts]);
-      setHasMore(newPosts.length === pageSize);
-      setLastVisible(snapshot.docs[newPosts.length - 1] || null);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+    let q;
+    if (userId) {
+      // Profile page: show all posts for this user
+      q = query(
+        collection(db, 'posts'),
+        where('userId', '==', userId),
+        orderBy('timestamp', 'desc'),
+        limit(pageSize)
+      );
+    } else if (category) {
+      q = query(
+        collection(db, 'posts'),
+        where('category', '==', category),
+        orderBy('timestamp', 'desc'),
+        limit(pageSize)
+      );
+    } else {
+      // Home feed: fetch all, filter client-side for privacy
+      q = query(
+        collection(db, 'posts'),
+        orderBy('timestamp', 'desc'),
+        limit(pageSize)
+      );
     }
-  };
+
+    const unsub = onSnapshot(
+      q,
+      (snapshot) => {
+        let allPosts = snapshot.docs.map(mapPostDoc);
+
+        // Apply privacy filtering for home feed (not profile page)
+        if (!userId && !category && currentUser) {
+          allPosts = allPosts.filter((post) => {
+            // Own posts always visible
+            if (post.userId === currentUser.uid) return true;
+            // Public posts always visible
+            const data = snapshot.docs.find((d) => d.id === post.id)?.data() as FirestorePostData | undefined;
+            if (!data) return true;
+            if (data.privacy === 'public' || !data.privacy) return true;
+            // Private posts only visible if current user follows the poster
+            if (data.privacy === 'private' || data.followersOnly) {
+              return followingList.includes(post.userId);
+            }
+            return true;
+          });
+        }
+
+        setPosts(allPosts);
+        setHasMore(false); // Real-time listener handles all updates
+        setLoading(false);
+      },
+      (err) => {
+        console.error('[useFeedData] Snapshot error:', err);
+        setError(err.message);
+        setLoading(false);
+      }
+    );
+
+    return () => unsub();
+  }, [pageSize, userId, category, currentUser, followingList]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    setLastVisible(null);
-    
-    try {
-      let q;
-      if (userId) {
-        q = query(
-          collection(db, 'posts'),
-          where('userId', '==', userId),
-          orderBy('timestamp', 'desc'),
-          limit(pageSize)
-        );
-      } else if (category) {
-        q = query(
-          collection(db, 'posts'),
-          where('category', '==', category),
-          orderBy('timestamp', 'desc'),
-          limit(pageSize)
-        );
-      } else {
-        q = query(
-          collection(db, 'posts'),
-          orderBy('timestamp', 'desc'),
-          limit(pageSize)
-        );
-      }
-
-      const snapshot = await getDocs(q);
-      const newPosts = snapshot.docs.map(doc => {
-        const data = doc.data() as FirestorePostData;
-        return {
-          id: doc.id,
-          userId: data.userId || '',
-          username: data.username || '',
-          userAvatar: data.userAvatar,
-          mediaURL: data.mediaURL || '',
-          mediaType: data.mediaType || 'image',
-          caption: data.caption || '',
-          timestamp: data.timestamp,
-          likes: data.likes || [],
-          likeCount: data.likeCount || 0,
-          comments: data.comments || [],
-          commentCount: data.commentCount || 0,
-          location: data.location,
-          category: data.category,
-          user: {
-            username: data.username || 'unknown',
-            displayName: data.displayName || 'Unknown User',
-            avatar: data.userAvatar
-          }
-        } as Post;
-      });
-      setPosts(newPosts);
-      setHasMore(newPosts.length === pageSize);
-      setLastVisible(snapshot.docs[newPosts.length - 1] || null);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setRefreshing(false);
-    }
+    // onSnapshot auto-refreshes, just toggle indicator
+    setTimeout(() => setRefreshing(false), 500);
   };
 
   const handleLike = async (postId: string) => {
-    // Implement like logic
     console.log('Liking post:', postId);
   };
 
   const handleFollow = async (userId: string) => {
-    // Implement follow logic
     console.log('Following user:', userId);
   };
 
   const handleDoubleClick = async (postId: string) => {
-    // Implement double click logic (like)
     console.log('Double clicked post:', postId);
   };
 
@@ -292,8 +178,8 @@ export const useFeedData = ({ pageSize = 10, userId, category }: UseFeedDataProp
     hasMore,
     error: error || '',
     refreshing,
-    fetchMoreData,
-    loadMorePosts: fetchMoreData,
+    fetchMoreData: () => {},
+    loadMorePosts: () => {},
     handleRefresh,
     handleLike,
     handleFollow,
