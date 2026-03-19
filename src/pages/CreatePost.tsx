@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { uploadImage } from '@/services/imageUpload';
 import { auth } from '@/config/firebase';
 import { useAuth } from '@/contexts/AuthContext';
+import { createPostDocument, createReelDocument } from '@/services/postService';
 type MediaType = 'image' | 'video' | null;
 type ContentType = 'post' | 'reel';
 
