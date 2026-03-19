@@ -1,151 +1,83 @@
 
 import { useState, useEffect } from 'react';
-import { getReels } from '../services/firestoreService';
+import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { db } from '../config/firebase';
 import { likeReel, unlikeReel, checkIfLiked } from '../services/postReactionsService';
 import { useAuth } from '../contexts/AuthContext';
 import { Reel } from '../types';
 
-// Define the Firestore document data structure for reels
-interface FirestoreReelData {
-  username: string;
-  userAvatar?: string;
-  videoURL: string;
-  thumbnailURL?: string;
-  caption: string;
-  likeCount: number;
-  commentCount: number;
-  shares?: number;
-  music?: string;
-  isLiked?: boolean;
-  isSaved?: boolean;
-  isFollowing?: boolean;
-  timestamp: any;
-}
-
-export const useReelsData = (pageSize = 10) => {
+export const useReelsData = (pageSize = 20) => {
   const { currentUser } = useAuth();
   const [reels, setReels] = useState<Reel[]>([]);
   const [loading, setLoading] = useState(true);
-  const [hasMore, setHasMore] = useState(true);
-  const [lastVisible, setLastVisible] = useState<any>(null);
+  const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchInitialData();
-  }, [pageSize]);
-
-  const fetchInitialData = async () => {
     setLoading(true);
     setError(null);
 
-    try {
-      const { reels: firestoreReels, lastDoc } = await getReels(undefined, pageSize);
-      
-      // Transform Firestore data to match Reel interface
-      const transformedReels = firestoreReels.map(reel => ({
-        id: parseInt(reel.id) || Math.floor(Math.random() * 1000000),
-        user: {
-          name: reel.user.username || 'unknown',
-          avatar: reel.user.avatar || '/placeholder.svg',
-          isFollowing: false // TODO: Implement follow status check
-        },
-        videoUrl: reel.videoURL || reel.mediaURL || '',
-        videoThumbnail: reel.thumbnailURL || '',
-        caption: reel.caption || '',
-        likes: reel.likes || 0,
-        comments: reel.comments || 0,
-        shares: reel.shares || 0,
-        music: reel.music || 'Original Audio',
-        isLiked: false, // Will be updated by checkIfLiked
-        isSaved: false, // TODO: Implement saved status
-        // Additional properties for compatibility
-        userId: reel.userId,
-        username: reel.user.username,
-        userAvatar: reel.user.avatar,
-        videoURL: reel.videoURL || reel.mediaURL,
-        timestamp: reel.timestamp,
-        likeCount: reel.likes || 0,
-        commentCount: reel.comments || 0,
-        isFollowing: false
-      })) as Reel[];
-      
-      // Check liked status for each reel if user is logged in
-      if (currentUser) {
-        for (const reel of transformedReels) {
-          if (reel.userId) {
-            const isLiked = await checkIfLiked(`reels/${reel.userId}`, currentUser.uid);
-            reel.isLiked = isLiked;
-          }
-        }
-      }
-      
-      setReels(transformedReels);
-      setHasMore(transformedReels.length === pageSize);
-      setLastVisible(lastDoc);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const q = query(
+      collection(db, 'reels'),
+      orderBy('timestamp', 'desc'),
+      limit(pageSize)
+    );
 
-  const loadMoreReels = async () => {
-    if (!hasMore || loading || !lastVisible) return;
+    const unsub = onSnapshot(
+      q,
+      (snapshot) => {
+        const transformedReels = snapshot.docs
+          .map((docSnap) => {
+            const data = docSnap.data();
+            return {
+              id: parseInt(docSnap.id) || Math.floor(Math.random() * 1000000),
+              user: {
+                name: data.username || 'unknown',
+                avatar: data.userAvatar || '/placeholder.svg',
+                isFollowing: false,
+              },
+              videoUrl: data.videoURL || data.mediaURL || '',
+              videoThumbnail: data.thumbnailURL || '',
+              caption: data.caption || '',
+              likes: data.likeCount || 0,
+              comments: data.commentCount || 0,
+              shares: data.shares || 0,
+              music: data.music || 'Original Audio',
+              isLiked: false,
+              isSaved: false,
+              userId: data.userId,
+              username: data.username,
+              userAvatar: data.userAvatar,
+              videoURL: data.videoURL || data.mediaURL,
+              timestamp: data.timestamp,
+              likeCount: data.likeCount || 0,
+              commentCount: data.commentCount || 0,
+              isFollowing: false,
+              _privacy: data.privacy, // internal use
+            } as Reel & { _privacy?: string };
+          })
+          // Only show public reels
+          .filter((r: any) => !r._privacy || r._privacy === 'public')
+          .map(({ _privacy, ...r }: any) => r as Reel);
 
-    setLoading(true);
-    try {
-      const { reels: firestoreReels, lastDoc } = await getReels(lastVisible, pageSize);
-      
-      const transformedReels = firestoreReels.map(reel => ({
-        id: parseInt(reel.id) || Math.floor(Math.random() * 1000000),
-        user: {
-          name: reel.user.username || 'unknown',
-          avatar: reel.user.avatar || '/placeholder.svg',
-          isFollowing: false
-        },
-        videoUrl: reel.videoURL || reel.mediaURL || '',
-        videoThumbnail: reel.thumbnailURL || '',
-        caption: reel.caption || '',
-        likes: reel.likes || 0,
-        comments: reel.comments || 0,
-        shares: reel.shares || 0,
-        music: reel.music || 'Original Audio',
-        isLiked: false,
-        isSaved: false,
-        userId: reel.userId,
-        username: reel.user.username,
-        userAvatar: reel.user.avatar,
-        videoURL: reel.videoURL || reel.mediaURL,
-        timestamp: reel.timestamp,
-        likeCount: reel.likes || 0,
-        commentCount: reel.comments || 0,
-        isFollowing: false
-      })) as Reel[];
-      
-      if (currentUser) {
-        for (const reel of transformedReels) {
-          if (reel.userId) {
-            const isLiked = await checkIfLiked(`reels/${reel.userId}`, currentUser.uid);
-            reel.isLiked = isLiked;
-          }
-        }
+        setReels(transformedReels);
+        setLoading(false);
+      },
+      (err) => {
+        console.error('[useReelsData] Error:', err);
+        setError(err.message);
+        setLoading(false);
       }
-      
-      setReels(prevReels => [...prevReels, ...transformedReels]);
-      setHasMore(transformedReels.length === pageSize);
-      setLastVisible(lastDoc);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    );
+
+    return () => unsub();
+  }, [pageSize]);
 
   const handleLike = async (reelId: string) => {
     if (!currentUser) return;
 
     try {
-      const reel = reels.find(r => r.id.toString() === reelId);
+      const reel = reels.find((r) => r.id.toString() === reelId);
       if (!reel) return;
 
       if (reel.isLiked) {
@@ -154,12 +86,13 @@ export const useReelsData = (pageSize = 10) => {
         await likeReel(reel.userId || reel.id.toString(), currentUser.uid);
       }
 
-      // Update local state
-      setReels(prev => prev.map(r => 
-        r.id.toString() === reelId 
-          ? { ...r, isLiked: !r.isLiked, likes: r.isLiked ? r.likes - 1 : r.likes + 1 }
-          : r
-      ));
+      setReels((prev) =>
+        prev.map((r) =>
+          r.id.toString() === reelId
+            ? { ...r, isLiked: !r.isLiked, likes: r.isLiked ? r.likes - 1 : r.likes + 1 }
+            : r
+        )
+      );
     } catch (error) {
       console.error('Error liking reel:', error);
     }
@@ -167,13 +100,13 @@ export const useReelsData = (pageSize = 10) => {
 
   const handleSave = async (reelId: string) => {
     console.log('Saving reel:', reelId);
-    // Add save logic here
   };
 
   const handleFollow = async (username: string) => {
     console.log('Following user:', username);
-    // Add follow logic here
   };
+
+  const loadMoreReels = () => {};
 
   return {
     reels,
@@ -183,6 +116,6 @@ export const useReelsData = (pageSize = 10) => {
     loadMoreReels,
     handleLike,
     handleSave,
-    handleFollow
+    handleFollow,
   };
 };

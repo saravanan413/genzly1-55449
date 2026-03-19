@@ -63,7 +63,6 @@ service cloud.firestore {
         allow update, delete: if request.auth != null && request.auth.uid == userId;
         
         // Create rule - allow authenticated users to create notifications for others
-        // FIX: Use request.time for timestamp validation to work with serverTimestamp()
         allow create: if request.auth != null 
           && request.resource.data.receiverId == userId
           && request.resource.data.senderId == request.auth.uid
@@ -130,7 +129,7 @@ service cloud.firestore {
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.mediaURL is string
         && request.resource.data.mediaURL.size() > 0
-        && request.resource.data.timestamp == request.time;
+        && request.resource.data.timestamp is timestamp;
 
       // Only owner can update/delete
       allow update, delete: if request.auth != null
@@ -143,7 +142,7 @@ service cloud.firestore {
           && request.resource.data.userId == request.auth.uid
           && request.resource.data.text is string
           && request.resource.data.text.size() > 0
-          && request.resource.data.timestamp == request.time;
+          && request.resource.data.timestamp is timestamp;
         allow update, delete: if request.auth != null
           && request.auth.uid == resource.data.userId;
       }
@@ -153,7 +152,7 @@ service cloud.firestore {
         allow read: if true;
         allow create: if request.auth != null
           && request.resource.data.userId == request.auth.uid
-          && request.resource.data.timestamp == request.time;
+          && request.resource.data.timestamp is timestamp;
         allow delete: if request.auth != null
           && request.auth.uid == resource.data.userId;
       }
@@ -168,7 +167,7 @@ service cloud.firestore {
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.mediaURL is string
         && request.resource.data.mediaURL.size() > 0
-        && request.resource.data.timestamp == request.time;
+        && request.resource.data.timestamp is timestamp;
 
       // Only owner can update/delete
       allow update, delete: if request.auth != null
@@ -181,7 +180,7 @@ service cloud.firestore {
           && request.resource.data.userId == request.auth.uid
           && request.resource.data.text is string
           && request.resource.data.text.size() > 0
-          && request.resource.data.timestamp == request.time;
+          && request.resource.data.timestamp is timestamp;
         allow update, delete: if request.auth != null
           && request.auth.uid == resource.data.userId;
       }
@@ -191,7 +190,7 @@ service cloud.firestore {
         allow read: if true;
         allow create: if request.auth != null
           && request.resource.data.userId == request.auth.uid
-          && request.resource.data.timestamp == request.time;
+          && request.resource.data.timestamp is timestamp;
         allow delete: if request.auth != null
           && request.auth.uid == resource.data.userId;
       }
