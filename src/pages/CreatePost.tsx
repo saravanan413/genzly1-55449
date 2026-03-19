@@ -148,7 +148,23 @@ const [loading, setLoading] = useState(false);
         onProgress: (percent) => setUploadProgress(percent),
       });
 
-      console.log('Upload complete:', { downloadUrl, caption, type: contentType });
+      console.log('[CreatePost] Upload complete, creating Firestore document...');
+
+      // Create Firestore document for the post/reel
+      const docData = {
+        userId: currentUser.uid,
+        mediaURL: downloadUrl,
+        caption,
+        mediaType: selectedMedia.type,
+      };
+
+      if (contentType === 'reel') {
+        await createReelDocument(docData);
+      } else {
+        await createPostDocument(docData);
+      }
+
+      console.log('[CreatePost] Firestore document created successfully');
 
       toast({
         title: contentType === 'post' ? "Post shared!" : "Reel shared!",
