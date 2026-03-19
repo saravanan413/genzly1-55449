@@ -122,10 +122,18 @@ const [loading, setLoading] = useState(false);
     setUploadProgress(0);
 
     try {
+      // Hard auth check using Firebase auth directly (not just context)
+      if (!auth.currentUser) {
+        throw new Error("User not authenticated. Please log in again.");
+      }
+
+      // Force refresh the ID token to ensure it's current before upload
+      await auth.currentUser.getIdToken(true);
+      console.log('[CreatePost] Firebase Auth token refreshed successfully.');
+
       const folder = contentType === 'reel' ? 'reels' : 'posts';
       const expectedPath = `${folder}/${currentUser.uid}/${selectedMedia.file.name}`;
 
-      console.log('Auth user:', auth.currentUser);
       console.log('[CreatePost] currentUser:', {
         uid: currentUser.uid,
         email: currentUser.email,
